@@ -3,9 +3,6 @@ import wx.lib.scrolledpanel as scrolled
 from enum import IntEnum
 
 
-app = wx.App()
-
-
 class BaseFrame(wx.Frame):
     def __init__(self, title, *, size=wx.DefaultSize, pos=wx.DefaultPosition, parent=None):
         super().__init__(parent, title=title, size=size, pos=pos)
@@ -86,6 +83,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
 
 
 def main():
+    app = wx.App()
     control_panel = ControlPanel()
     control_panel.Show()
 
