@@ -5,7 +5,6 @@ import wx
 import wx.lib.scrolledpanel as scrolled
 import wx.aui as aui
 
-
 class BaseFrame(wx.Frame):
     def __init__(self, title, *, size=wx.DefaultSize, pos=wx.DefaultPosition, window=None):
         super().__init__(window, title=title, size=size, pos=pos)
@@ -27,8 +26,8 @@ class Unicode:
 
 class BaseWindow(BaseFrame):
     def __init__(self):
-        super().__init__('Control Panel', pos=wx.Point(0, 0), size=wx.Size(1080, 720))
-        self.elevators = [(5, 7), (9, 1), (3, 6), (2, 10), (8, 2), (7, 4), (1, 6), (4, 9), (6, 10), (10, 1), (7, 3), (3, 5), (9, 7), (6, 3), (2, 8), (1, 3), (4, 7), (8, 5), (5, 8), (10, 4)]
+        super().__init__('flying things that move vertically', pos=wx.Point(0, 0), size=wx.Size(1080, 720))
+        self.elevators = [(5, 7), (9, 1), (3, 6), (2, 10), (8, 2), (7, 4), (1, 6), (4, 9), (6, 10), (10, 1), (7, 3), (3, 5), (9, 7), (6, 3), (2, 8), (1, 3), (4, 7), (8, 5), (5, 8), (10, 4), (3, 4), (7, 9)]
         self.font = wx.Font(13, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'Segoue UI')
         self.positions = {
             'elevators': wx.Point(0, 0),
@@ -38,6 +37,7 @@ class BaseWindow(BaseFrame):
         self.speed = 1
         self.algo = None
         self.floors = 25
+        self.SetBackgroundColour('white')
         self.InitUI()
 
     def InitUI(self):
@@ -129,6 +129,9 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
 class DebugPanel(wx.Panel):
     def __init__(self, window):
         self.window = window
+        if self.window.positions['debug'] is None:
+            raise RuntimeError('Elevator panel must be loaded first')
+
         super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(540, 400), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=self.window.positions['debug'])
         self.nb = aui.AuiNotebook(self, style=wx.aui.AUI_NB_TOP)
         self.InitUI()
@@ -261,6 +264,68 @@ class DebugPanel(wx.Panel):
         sz.SetDimension(0, 0, 540, 400)
         self.nb.AddPage(panel, "Log")
 
+class ElevatorStatusPanel(scrolled.ScrolledPanel):
+    def __init__(self, window):
+        # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(150, 720), pos=wx.Point(560, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        self.window = window
+
+        self.InitUI()
+    
+    def InitUI(self):
+        sz = wx.FlexGridSizer(5)
+
+        label_font = wx.Font(self.window.font)
+        label_font.SetPointSize(21)
+        button_font = wx.Font(self.window.font)
+        button_font.SetPointSize(18)
+        
+        for i in range(len(self.window.elevators)):
+            text = wx.StaticText(self, wx.ID_ANY, str(i + 1))
+            text.SetFont(label_font)
+            sz.Add(text, 0, wx.FIXED_MINSIZE)
+            sz.AddSpacer(30)
+
+            up_text = wx.StaticText(self, wx.ID_ANY, Unicode.UP)
+            up_text.SetFont(button_font)
+
+            sz.Add(up_text, 0, wx.FIXED_MINSIZE)
+            sz.AddSpacer(30)
+
+            down_text = wx.StaticText(self, wx.ID_ANY, Unicode.DOWN)
+            down_text.SetFont(button_font)
+            # down_text.SetForegroundColour((255,0,0)) # set text color
+
+            sz.Add(down_text, 0, wx.FIXED_MINSIZE)
+
+
+        self.SetSizer(sz)
+        self.SetupScrolling()
+
+class StatsPanel(scrolled.ScrolledPanel):
+    def __init__(self, window):
+        # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(350, 720), pos=wx.Point(730, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        self.window = window
+
+        self.InitUI()
+    
+    def InitUI(self):
+        sz = wx.BoxSizer(wx.VERTICAL)
+
+        sz.Add(wx.StaticText(self, wx.ID_ANY, 'Stats (MIN/MAX/MEAN/MED)'), 0, wx.FIXED_MINSIZE)
+        sz.AddSpacer(10)
+
+        # wait time
+        wait_text = wx.StaticText(self, wx.ID_ANY, 'Wait Time: 0/0/0/0')
+        sz.Add(wait_text, 0, wx.FIXED_MINSIZE)
+        # time in lift
+        time_text = wx.StaticText(self, wx.ID_ANY, 'Time in Lift: 0/0/0/0')
+        sz.Add(time_text, 0, wx.FIXED_MINSIZE)
+
+        sz.SetDimension(0, 0, 350, 720)
+        self.SetSizer(sz)
+
 def main():
     app = wx.App()
     control_panel = BaseWindow()
@@ -271,6 +336,13 @@ def main():
 
     debug_panel = DebugPanel(window=control_panel)
     debug_panel.Show()
+
+    elevator_status_panel = ElevatorStatusPanel(window=control_panel)
+    elevator_status_panel.Show()
+
+    stats_panel = StatsPanel(window=control_panel)
+    stats_panel.Show()
+
     app.MainLoop()
 
 
