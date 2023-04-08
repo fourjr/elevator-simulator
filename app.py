@@ -1,13 +1,21 @@
+import copy
 import math
 from enum import IntEnum
 
+import threading
 import wx
 import wx.lib.scrolledpanel as scrolled
+import wx.lib.newevent as wxne
 import wx.aui as aui
+
+from elevators import ElevatorManagerThread
 
 class BaseFrame(wx.Frame):
     def __init__(self, title, *, size=wx.DefaultSize, pos=wx.DefaultPosition, window=None):
         super().__init__(window, title=title, size=size, pos=pos)
+
+# This creates a new Event class and a EVT binder function
+(UpdateElevators, EVT_UPDATE_ELEVATORS) = wxne.NewEvent()
 
 
 class ID(IntEnum):
@@ -27,7 +35,6 @@ class Unicode:
 class BaseWindow(BaseFrame):
     def __init__(self):
         super().__init__('flying things that move vertically', pos=wx.Point(0, 0), size=wx.Size(1080, 720))
-        self.elevators = [(5, 7), (9, 1), (3, 6), (2, 10), (8, 2), (7, 4), (1, 6), (4, 9), (6, 10), (10, 1), (7, 3), (3, 5), (9, 7), (6, 3), (2, 8), (1, 3), (4, 7), (8, 5), (5, 8), (10, 4), (3, 4), (7, 9)]
         self.font = wx.Font(13, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'Segoue UI')
         self.positions = {
             'elevators': wx.Point(0, 0),
@@ -38,8 +45,22 @@ class BaseWindow(BaseFrame):
         self.algo = None
         self.floors = 25
         self.effective_size = wx.Size(1000, 640)
+
+
+        self.manager_thread = ElevatorManagerThread(self, UpdateElevators)
+        self.manager = self.manager_thread.manager
+
+        self.Bind(EVT_UPDATE_ELEVATORS, self.OnUpdateElevators)
         self.SetBackgroundColour('white')
         self.InitUI()
+
+    def OnUpdateElevators(self, e: wx.Event):
+        for c in list(self.GetChildren()):
+            if hasattr(c, 'OnUpdateElevators'):
+                c.OnUpdateElevators(self.manager, e.manager)
+            else:
+                self.WriteToLog(f"OnUpdateElevators function not in {c}")
+        self.manager = copy.deepcopy(e.manager)  ## TODO
 
     def InitUI(self):
         menubar = wx.MenuBar()
@@ -52,6 +73,11 @@ class BaseWindow(BaseFrame):
         self.SetMenuBar(menubar)
         self.SetFont(self.font)
 
+    def Close(self, *args):
+        # TODO
+        self.manager_thread.join()
+        super().Close(*args)
+
     def OnQuit(self, e):
         self.Close()
 
@@ -59,7 +85,7 @@ class BaseWindow(BaseFrame):
         self.WriteToLog(f'Add passenger on floor {floor_i} to {floor_f}')
 
     def AddElevator(self, e, floor):
-        self.elevators.append((floor, floor))
+        self.manager_thread.add_elevator(floor)
         self.WriteToLog(f'Add elevator on floor {floor}')
 
     def SetAlgorithm(self,e, algo):
@@ -82,17 +108,71 @@ class BaseWindow(BaseFrame):
     def WriteToLog(self, message):
         if self.log_tc is None:
             return
-        dt = wx.DateTime.Now().FormatISOCombined()
+        dt = wx.DateTime.Now().FormatISOTime()
         self.log_tc.AppendText(f'{dt}: {message}\n')
 
 class ElevatorsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
         self.window = window
         super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        self.texts = {}  # id : text
         self.InitUI()
+        self.SetupScrolling(scroll_y=False)
+
+    def _add_elevator(self, ev):
+        elevator_box = wx.StaticBox(self, label=f"Elevator {ev.id}", pos=wx.Point(0, 0), size=wx.Size(125, 100))
+        top_border, other_border = elevator_box.GetBordersForSizer()
+
+        text_sizer = wx.BoxSizer(wx.VERTICAL)
+        text_sizer.AddSpacer(top_border)
+
+        fmt_text = f'{ev.current_floor}'
+        if ev.destination is not None:
+            fmt_text += f' → {ev.destination}'
+
+        text = wx.StaticText(elevator_box, wx.ID_ANY, fmt_text)
+        self.texts[ev.id] = text
+
+        font = wx.Font(self.window.font)
+        font.SetPointSize(21)
+        text.SetFont(font)
+        text_sizer.Add(text, 1, wx.ALL | wx.CENTER, other_border+10)
+        elevator_box.SetSizer(text_sizer)
+
+        self.sz.Add(elevator_box, 1, wx.ALL | wx.CENTRE, 10)
+
+    def OnUpdateElevators(self, before, after):
+        # changes to track: current_floor, destination, new elevators
+        updated = False
+        if len(before.elevators) > 6 and len(after.elevators) <= 6:
+            updated = True
+            self.sz.SetCols(3)
+            self.sz.SetRows(2)
+        elif len(before.elevators) != len(after.elevators) and len(after.elevators) > 6 and len(after.elevators) % 3 == 1:
+            updated = True
+            self.sz.SetCols(math.ceil(len(after.elevators) / 3))
+            self.sz.SetRows(3)
+
+        for ev in after.elevators:
+            if ev.id not in self.texts:
+                updated = True
+                self._add_elevator(ev)
+            else:
+                fmt_text = f'{ev.current_floor}'
+                if ev.destination is not None:
+                    fmt_text += f' → {ev.destination}'
+
+                if self.texts[ev.id].GetLabel() != fmt_text:
+                    updated = True
+                    self.texts[ev.id].SetLabel(fmt_text)
+
+        if updated:
+            self.window.WriteToLog("ElevatorsPanel Layout Updated")
+            self.Layout()
+            self.SetupScrolling(scroll_y=False)
 
     def InitUI(self):
-        num_elevators = len(self.window.elevators)
+        num_elevators = 0
         if num_elevators <= 6:
             rows = 2
             cols = 3
@@ -100,41 +180,24 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
             rows = 3
             cols = math.ceil(num_elevators / 3)
 
-        sz = wx.GridSizer(rows, cols, gap=wx.Size(5, 5))
-        for n, (curr, going) in enumerate(self.window.elevators):
-            elevator_box = wx.StaticBox(self, label="Elevator " + str(n + 1), pos=wx.Point(0, 0), size=wx.Size(125, 100))
-            top_border, other_border = elevator_box.GetBordersForSizer()
-
-            text_sizer = wx.BoxSizer(wx.VERTICAL)
-            text_sizer.AddSpacer(top_border)
-
-            text = wx.StaticText(elevator_box, wx.ID_ANY, f'{curr} → {going}')
-            font = wx.Font(self.window.font)
-            font.SetPointSize(21)
-            text.SetFont(font)
-            text_sizer.Add(text, 1, wx.ALL | wx.CENTER, other_border+10)
-            elevator_box.SetSizer(text_sizer)
-
-            sz.Add(elevator_box, 1, wx.ALL | wx.CENTRE, 10)
+        self.sz = wx.GridSizer(rows, cols, gap=wx.Size(5, 5))
  
-        _, height = sz.CalcMin()
-        self.size = wx.Size(540, height)
+        # _, height = self.sz.CalcMin()
+        self.size = wx.Size(540, 380)
         self.SetSize(self.size)
-        self.window.positions['debug'] = wx.Point(0, height + 20)
-        self.SetSizer(sz)
+        self.SetSizer(self.sz)
 
-        self.SetupScrolling(scroll_y=False)
 
 
 
 class DebugPanel(wx.Panel):
     def __init__(self, window):
         self.window = window
-        if self.window.positions['debug'] is None:
-            raise RuntimeError('Elevator panel must be loaded first')
+        # if self.window.positions['debug'] is None:
+        #     raise RuntimeError('Elevator panel must be loaded first')
 
-        self.size = wx.Size(540, self.window.effective_size.y - self.window.positions['debug'].y)
-        super().__init__(id=wx.ID_ANY, parent=window, size=self.size, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=self.window.positions['debug'])
+        self.size = wx.Size(540, self.window.effective_size.y - 400)
+        super().__init__(id=wx.ID_ANY, parent=window, size=self.size, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=(0, 400))
         self.nb = aui.AuiNotebook(self, style=wx.aui.AUI_NB_TOP)
         self.InitUI()
 
@@ -216,18 +279,37 @@ class DebugPanel(wx.Panel):
         speed_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Speed'), 1)
         speed_sz.AddSpacer(10)
 
-        speed_selection = wx.SpinCtrlDouble(panel, initial=1, min=0.01, max=10, inc=0.01)
+        speed_selection = wx.SpinCtrlDouble(panel, initial=15, min=0.01, max=100, inc=0.01)
         speed_sz.Add(speed_selection, 1, wx.FIXED_MINSIZE)
 
         # # button
         speed_sz.AddSpacer(10)
-        set_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Set Speed')
-        set_btn.Bind(wx.EVT_BUTTON, lambda e: self.window.SetSpeed(
-            e, speed_selection.GetValue())
+        set_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Set')
+        set_btn.Bind(wx.EVT_BUTTON, lambda _: self.window.manager_thread.set_speed(
+            speed_selection.GetValue())
         )
         speed_sz.Add(set_btn, 1, wx.FIXED_MINSIZE)
 
         sz.Add(speed_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
+        sz.AddSpacer(5)
+
+        # floors
+        floor_sz = wx.BoxSizer(wx.HORIZONTAL)
+        floor_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Floors'), 1)
+        floor_sz.AddSpacer(10)
+
+        floor_selection = wx.SpinCtrl(panel, initial=10, min=1, max=100)
+        floor_sz.Add(floor_selection, 1, wx.FIXED_MINSIZE)
+
+        # # button
+        floor_sz.AddSpacer(10)
+        set_floor_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Set')
+        set_floor_btn.Bind(wx.EVT_BUTTON, lambda _: self.window.manager_thread.set_floors(
+            floor_selection.GetValue())
+        )
+        floor_sz.Add(set_floor_btn, 1, wx.FIXED_MINSIZE)
+
+        sz.Add(floor_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
 
         # control
@@ -269,38 +351,62 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         self.window = window
         super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(150, self.window.effective_size.y), pos=wx.Point(560, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
 
+        self.rows = []
         self.InitUI()
-    
-    def InitUI(self):
-        sz = wx.FlexGridSizer(5)
 
+    def OnUpdateElevators(self, before, after):
+        updated = False
+        if before.floors < after.floors:
+            for i in range(after.floors - before.floors):
+                self._add_floor(i + before.floors)
+
+            updated = True
+        elif before.floors > after.floors:
+            for i in range(before.floors - after.floors):
+                for j in self.rows[-1]:
+                    self.sz.Remove(j)
+                    j.Destroy()
+                self.rows.pop()
+            updated = True
+        if updated:
+            self.window.WriteToLog("ElevatorStatusPanel Layout Updated")
+            self.Layout()
+            self.SetupScrolling(scroll_x=False)
+
+    def _add_floor(self, num):
         label_font = wx.Font(self.window.font)
         label_font.SetPointSize(21)
         button_font = wx.Font(self.window.font)
         button_font.SetPointSize(18)
-        
-        for i in range(len(self.window.elevators)):
-            text = wx.StaticText(self, wx.ID_ANY, str(i + 1))
-            text.SetFont(label_font)
-            sz.Add(text, 0, wx.FIXED_MINSIZE)
-            sz.AddSpacer(30)
 
-            up_text = wx.StaticText(self, wx.ID_ANY, Unicode.UP)
-            up_text.SetFont(button_font)
+        text = wx.StaticText(self, wx.ID_ANY, str(num + 1))
+        text.SetFont(label_font)
+        self.sz.Add(text, 0, wx.FIXED_MINSIZE)
+        self.sz.AddSpacer(30)
 
-            sz.Add(up_text, 0, wx.FIXED_MINSIZE)
-            sz.AddSpacer(30)
+        up_text = wx.StaticText(self, wx.ID_ANY, Unicode.UP)
+        up_text.SetFont(button_font)
 
-            down_text = wx.StaticText(self, wx.ID_ANY, Unicode.DOWN)
-            down_text.SetFont(button_font)
-            # down_text.SetForegroundColour((255,0,0)) # set text color
+        self.sz.Add(up_text, 0, wx.FIXED_MINSIZE)
+        self.sz.AddSpacer(30)
 
-            sz.Add(down_text, 0, wx.FIXED_MINSIZE)
+        down_text = wx.StaticText(self, wx.ID_ANY, Unicode.DOWN)
+        down_text.SetFont(button_font)
 
+        self.rows.append((text, up_text, down_text))
+        # down_text.SetForegroundColour((255,0,0)) # set text color
 
-        self.SetSizer(sz)
-        sz.SetDimension(0, 0, 150, self.window.effective_size.y)
-        self.SetupScrolling()
+        self.sz.Add(down_text, 0, wx.FIXED_MINSIZE)
+
+    def InitUI(self):
+        self.sz = wx.FlexGridSizer(5)
+
+        for i in range(self.window.manager_thread.manager.floors):
+            self._add_floor(i)
+
+        self.SetSizer(self.sz)
+        self.sz.SetDimension(0, 0, 150, self.window.effective_size.y)
+        self.SetupScrolling(scroll_x=False)
 
 class StatsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
