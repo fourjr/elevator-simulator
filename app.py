@@ -37,6 +37,7 @@ class BaseWindow(BaseFrame):
         self.speed = 1
         self.algo = None
         self.floors = 25
+        self.effective_size = wx.Size(1000, 640)
         self.SetBackgroundColour('white')
         self.InitUI()
 
@@ -54,8 +55,8 @@ class BaseWindow(BaseFrame):
     def OnQuit(self, e):
         self.Close()
 
-    def AddPassenger(self, e, floor, direction):
-        self.WriteToLog(f'Add passenger on floor {floor} going {direction}')
+    def AddPassenger(self, e, floor_i, floor_f):
+        self.WriteToLog(f'Add passenger on floor {floor_i} to {floor_f}')
 
     def AddElevator(self, e, floor):
         self.elevators.append((floor, floor))
@@ -132,7 +133,8 @@ class DebugPanel(wx.Panel):
         if self.window.positions['debug'] is None:
             raise RuntimeError('Elevator panel must be loaded first')
 
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(540, 400), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=self.window.positions['debug'])
+        self.size = wx.Size(540, self.window.effective_size.y - self.window.positions['debug'].y)
+        super().__init__(id=wx.ID_ANY, parent=window, size=self.size, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=self.window.positions['debug'])
         self.nb = aui.AuiNotebook(self, style=wx.aui.AUI_NB_TOP)
         self.InitUI()
 
@@ -152,8 +154,8 @@ class DebugPanel(wx.Panel):
 
         # add elevator
         elevator_sz = wx.BoxSizer(wx.HORIZONTAL)
-        elevator_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Add Elevator (starting floor)'), 1)
-        ef_selection = wx.SpinCtrl(panel, initial=1, min=1, max=self.window.floors)
+        elevator_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Add Elevator'), 1)
+        ef_selection = wx.SpinCtrl(panel, value='Floor', initial=1, min=1, max=self.window.floors)
         elevator_sz.Add(ef_selection, 1, wx.FIXED_MINSIZE)
 
         # # button
@@ -171,20 +173,18 @@ class DebugPanel(wx.Panel):
         passenger_sz = wx.BoxSizer(wx.HORIZONTAL)
         passenger_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Add Passenger'), 1)
         passenger_sz.AddSpacer(10)
-        pf_selection = wx.SpinCtrl(panel, initial=1, min=1, max=self.window.floors)
-        passenger_sz.Add(pf_selection, 1, wx.FIXED_MINSIZE)
+        pfi_selection = wx.SpinCtrl(panel, value='Start', initial=1, min=1, max=self.window.floors)
+        pff_selection = wx.SpinCtrl(panel, value='Destination', initial=1, min=1, max=self.window.floors)
+        passenger_sz.Add(pfi_selection, 1, wx.FIXED_MINSIZE)
+        passenger_sz.Add(pff_selection, 1, wx.FIXED_MINSIZE)
 
         passenger_sz.AddSpacer(10)
-
-        dir_selection = wx.Choice(panel, choices=[Unicode.UP, Unicode.DOWN])
-        dir_selection.SetSelection(0)
-        passenger_sz.Add(dir_selection, 1, wx.FIXED_MINSIZE)
 
         # # button
         passenger_sz.AddSpacer(10)
         add_passenger_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Add')
         add_passenger_btn.Bind(wx.EVT_BUTTON, lambda e: self.window.AddPassenger(
-            e, pf_selection.GetValue(), dir_selection.GetString(dir_selection.GetCurrentSelection()))
+            e, pfi_selection.GetValue(), pff_selection.GetValue())
         )
         passenger_sz.Add(add_passenger_btn, 1, wx.FIXED_MINSIZE)
 
@@ -250,7 +250,7 @@ class DebugPanel(wx.Panel):
         sz.Add(ctrl_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
 
         # end
-        sz.SetDimension(0, 0, 540, 400)
+        sz.SetDimension(wx.Point(0, 0), self.size)
         self.nb.AddPage(panel, "Controls")
 
     def LoadLogPanel(self):
@@ -266,9 +266,8 @@ class DebugPanel(wx.Panel):
 
 class ElevatorStatusPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
-        # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(150, 720), pos=wx.Point(560, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
         self.window = window
+        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(150, self.window.effective_size.y), pos=wx.Point(560, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
 
         self.InitUI()
     
@@ -300,30 +299,29 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
 
 
         self.SetSizer(sz)
+        sz.SetDimension(0, 0, 150, self.window.effective_size.y)
         self.SetupScrolling()
 
 class StatsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
         # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(350, 720), pos=wx.Point(730, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
         self.window = window
+        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(350, self.window.effective_size.y), pos=wx.Point(730, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
 
         self.InitUI()
     
     def InitUI(self):
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        sz.Add(wx.StaticText(self, wx.ID_ANY, 'Stats (MIN/MAX/MEAN/MED)'), 0, wx.FIXED_MINSIZE)
+        self.stats_tc = wx.TextCtrl(self, wx.ID_ANY, 'Stats (MIN/MAX/MEAN/MED)\n\nWait Time: 0/0/0/0\nTime in Lift: 0/0/0/0', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP, size=wx.Size(350, 360))
+        sz.Add(self.stats_tc)
         sz.AddSpacer(10)
 
-        # wait time
-        wait_text = wx.StaticText(self, wx.ID_ANY, 'Wait Time: 0/0/0/0')
-        sz.Add(wait_text, 0, wx.FIXED_MINSIZE)
-        # time in lift
-        time_text = wx.StaticText(self, wx.ID_ANY, 'Time in Lift: 0/0/0/0')
-        sz.Add(time_text, 0, wx.FIXED_MINSIZE)
-
-        sz.SetDimension(0, 0, 350, 720)
+        sz.Add(wx.StaticText(self, wx.ID_ANY, 'Notes'))
+        sz.AddSpacer(3)
+        _, height = sz.GetMinSize()
+        sz.Add(wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_BESTWRAP, size=wx.Size(350, self.window.effective_size.y - height - 10)))
+        sz.SetDimension(0, 0, 350, self.window.effective_size.y)
         self.SetSizer(sz)
 
 def main():
