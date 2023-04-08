@@ -496,7 +496,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
                 if down == 0:
                     self.rows[n][1].SetForegroundColour(wx.Colour(0, 0, 0))
                 else:
-                    self.rows[n][1].SetForegroundColour(wx.Colour(0, 255, 0))
+                    self.rows[n][1].SetForegroundColour(wx.Colour(255, 0, 0))
                 self.rows[n][0].SetLabel(str(up // 60).zfill(2))
                 self.rows[n][1].SetLabel(str(down // 60).zfill(2))
 
