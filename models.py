@@ -128,8 +128,26 @@ class ElevatorManager:
         """
         return True
 
-    def post_unload(self, load, elevator):
+    def on_load_removed(self, load, elevator):
         """Runs after a load is unloaded
+
+        load: Load
+            The load to check
+        elevator: Elevator
+            The elevator to check
+        """
+        pass
+
+    def pre_tick(self):
+        """Runs at the start of every tick"""
+        pass
+
+    def post_tick(self):
+        """Runs at the end of every tick"""
+        pass
+
+    def on_load_added(self, load, elevator):
+        """Runs when a load is added to an elevator
 
         load: Load
             The load to check
@@ -169,6 +187,7 @@ class ElevatorManager:
     def cycle(self):
         """Runs a cycle of the elevator manager"""
         # Boarding
+        self.pre_tick()
         for elevator in self.elevators:
             if elevator.load <= self.max_load:
                 loads_to_add = []
@@ -183,16 +202,14 @@ class ElevatorManager:
 
                         self.thread.window.WriteToLog(LogLevel.INFO, f'Load {load.id} added to elevator {elevator.id}')
                         loads_to_add.append(load)
-
                         load.elevator = elevator
                         load.enter_lift_tick = self.thread.current_tick
                         wait_time = self.thread.current_tick - load.tick_created
                         self.wait_times.append(wait_time)
-
-                if loads_to_add:
-                    elevator.add_loads(loads_to_add)
+                        elevator.add_load(load)
 
             elevator.cycle()
+        self.post_tick()
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -202,14 +219,13 @@ class ElevatorManager:
 class Elevator:
     def __init__(self, thread, elevator_id, current_floor=1, attributes=None) -> None:
         self.id = elevator_id
-        self._current_floor = current_floor
-        self._destination: int = None
-
-        self.loads: List[Load] = []
-
-        self.attributes: List[str] = attributes or []
         self.thread = thread
+        self._current_floor = current_floor
+        self.loads: List[Load] = []
+        self.attributes: List[str] = attributes or []
         self.enabled: bool = True
+
+        self._destination: int = self.thread.manager.get_new_destination(self)
 
     @property
     def destination(self):
@@ -266,7 +282,7 @@ class Elevator:
             self.loads.remove(load)
             self.thread.manager.loads.remove(load)
 
-            self.thread.manager.post_unload(load, self)
+            self.thread.manager.on_load_removed(load, self)
 
     def cycle(self):
         """Runs a cycle of the elevator"""
@@ -285,18 +301,18 @@ class Elevator:
         if self.destination is None:
             self._destination = self.thread.manager.get_new_destination(self)
 
-    def add_loads(self, loads):
+    def add_load(self, load):
         """Adds new loads to the elevator.
 
         loads: list[Load]
             A list of loads to add to the elevator
         """
         # Take a person as 60kg on average
-        new_load = sum(x.weight for x in loads)
-        if self.thread.manager.max_load is not None and self.load + new_load > self.thread.manager.max_load:
+        if self.thread.manager.max_load is not None and self.load + load.weight > self.thread.manager.max_load:
             raise FullElevator(self.id)
 
-        self.loads.extend(loads)
+        self.loads.append(load)
+        self.thread.manager.on_load_added(load, self)
 
     def __repr__(self) -> str:
         return f'<Elevator {self.id} load={self.load}>'

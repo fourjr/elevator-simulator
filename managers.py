@@ -49,6 +49,12 @@ class ElevatorManagerKnuth(ElevatorManager):
         super().__init__(*args, **kwargs)
         self.current_direction = {}
 
+    def _calculate_direction(self, elevator, destination_floor):
+            if elevator.current_floor > destination_floor:
+                self.current_direction[elevator.id] = Direction.DOWN
+            else:
+                self.current_direction[elevator.id] = Direction.UP
+
     def get_new_destination(self, elevator: Elevator):
         """Gets a new destination for an elevator using the random strategy
 
@@ -56,7 +62,7 @@ class ElevatorManagerKnuth(ElevatorManager):
             The elevator to get a new destination for
         """
         if elevator.load != 0:
-            # go to closest
+            # there is load, go to closest
             destination_floor = sorted(elevator.loads, key=lambda x: abs(x.destination_floor - elevator.current_floor))[0].destination_floor
         else:
             if len(self.pending_loads) == 0:
@@ -67,10 +73,7 @@ class ElevatorManagerKnuth(ElevatorManager):
             destination_floor = sorted(self.pending_loads, key=lambda x: x.tick_created)[0].initial_floor
 
         if self.current_direction.get(elevator.id) is None:
-            if elevator.current_floor > destination_floor:
-                self.current_direction[elevator.id] = Direction.DOWN
-            else:
-                self.current_direction[elevator.id] = Direction.UP
+            self._calculate_direction(elevator, destination_floor)
 
         return destination_floor
 
@@ -89,8 +92,42 @@ class ElevatorManagerKnuth(ElevatorManager):
 
         return False
 
-    def post_unload(self, load, elevator):
+    def on_load_removed(self, load, elevator):
         if elevator.load == 0:
             # No more loads
             self.current_direction[elevator.id] = None
-            # elevator._destination = None
+        return super().on_load_removed(load, elevator)
+
+    def on_load_added(self, load, elevator):
+        if len(elevator.loads) == 1:
+            # First load, reset destination
+            elevator._destination = self.get_new_destination(elevator)
+        return super().on_load_added(load, elevator)
+
+
+class ElevatorManagerKnuthDash(ElevatorManagerKnuth):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.dash_to_floor = None  # if not None, the elevator will dash to this floor
+
+    def get_new_destination(self, elevator: Elevator):
+        """Gets a new destination for an elevator using the random strategy
+
+        elevator: Elevator
+            The elevator to get a new destination for
+        """
+        destination_floor = super().get_new_destination(elevator)
+        if elevator.load == 0:
+            self.dash_to_floor = destination_floor
+
+        return destination_floor
+
+    def pre_load_check(self, load, elevator: Elevator):
+        if self.dash_to_floor is not None and self.dash_to_floor != elevator.current_floor:
+            return False
+
+        return super().pre_load_check(load, elevator)
+
+    def on_load_added(self, load, elevator):
+        self.dash_to_floor = None
+        return super().on_load_added(load, elevator)

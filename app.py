@@ -12,7 +12,7 @@ import wx.lib.newevent as wxne
 import wx.aui as aui
 
 from elevators import ElevatorManagerThread
-from managers import ElevatorManagerRandom, ElevatorManagerRolling, ElevatorManagerKnuth
+from managers import ElevatorManagerKnuthDash, ElevatorManagerRandom, ElevatorManagerRolling, ElevatorManagerKnuth
 from models import LogLevel, LogMessage
 
 class BaseFrame(wx.Frame):
@@ -93,7 +93,7 @@ class BaseWindow(BaseFrame):
         self.WriteToLog(LogLevel.INFO, 'Save')
 
     def WriteToLog(self, level: LogLevel, message):
-        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnUpdateLog(LogMessage(level, message, self.manager_thread.current_tick))
+        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(LogMessage(level, message, self.manager_thread.current_tick))
 
     @property
     def active(self):
@@ -208,9 +208,10 @@ class DebugPanel(wx.Panel):
         self.floors_selections = []
 
         self.algorithms = {
+            'Knuth': ElevatorManagerKnuth,
+            'KnuthDash': ElevatorManagerKnuthDash,
             'Random': ElevatorManagerRandom,
             'Rolling': ElevatorManagerRolling,
-            'Knuth': ElevatorManagerKnuth,
 
         }
         self.InitUI()
@@ -245,10 +246,10 @@ class DebugPanel(wx.Panel):
 
     def AddPassenger(self, floor_i, floor_f):
         if floor_i == floor_f:
-            self.window.WriteToLog(LogLevel.WARNING, f'Passenger on floor {floor_i} to {floor_f} is not valid')
+            self.window.WriteToLog(LogLevel.ERROR, f'Passenger on floor {floor_i} to {floor_f} is not valid')
             return
-        self.window.manager_thread.add_passenger(floor_i, floor_f)
         self.window.WriteToLog(LogLevel.INFO, f'Add passenger on floor {floor_i} to {floor_f}')
+        return self.window.manager_thread.add_passenger(floor_i, floor_f)
 
     def AddRandomPassengers(self, count):
         for _ in range(count):
@@ -301,7 +302,7 @@ class DebugPanel(wx.Panel):
         passenger_sz.AddSpacer(10)
 
         # random
-        random_passenger_count = wx.SpinCtrl(panel, value='Count', initial=1, min=1, max=100)
+        random_passenger_count = wx.SpinCtrl(panel, value='Count', initial=1, min=1)
         passenger_sz.Add(random_passenger_count, 1, wx.FIXED_MINSIZE)
         random_passenger_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Random')
         random_passenger_btn.Bind(wx.EVT_BUTTON, lambda e: self.AddRandomPassengers(
@@ -334,7 +335,7 @@ class DebugPanel(wx.Panel):
         speed_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Speed'), 1)
         speed_sz.AddSpacer(10)
 
-        speed_selection = wx.SpinCtrlDouble(panel, initial=3, min=0.01, max=999, inc=0.01)
+        speed_selection = wx.SpinCtrlDouble(panel, initial=3, min=0.01, inc=0.01)
         speed_sz.Add(speed_selection, 1, wx.FIXED_MINSIZE)
 
         # # button
@@ -408,7 +409,7 @@ class DebugPanel(wx.Panel):
         # max capacity
         load_sz = wx.BoxSizer(wx.HORIZONTAL)
         load_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Max Load'), 1)
-        load_selection = wx.SpinCtrl(panel, initial=15, min=1, max=100)
+        load_selection = wx.SpinCtrl(panel, initial=15, min=1)
         load_sz.Add(load_selection, 1, wx.FIXED_MINSIZE)
 
         def set_load_callback(_):
@@ -427,10 +428,10 @@ class DebugPanel(wx.Panel):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_BESTWRAP)
+        tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_BESTWRAP, size=(self.size.x, self.size.y - 20))
         sz.Add(tc, 1, wx.EXPAND)
 
-        sz.SetDimension(0, 0, 540, 400)
+        sz.SetDimension(wx.Point(0, 0), self.size)
         self.nb.AddPage(panel, "Notes")
 
 
@@ -651,9 +652,18 @@ class LogPanel(wx.Panel):
         self.log_levels.remove(LogLevel.DEBUG)
         self.InitUI()
 
-    def OnUpdateLog(self, message=None):
-        if message is not None:
-            self.log_messages.append(message)
+    def OnLogUpdate(self, message):
+        self.log_messages.append(message)
+        if message.level in self.log_levels:
+            self.log_tc.AppendText(f'[{message.level.name[0]}] {message.tick}: {message.message}\n')
+
+    def OnLogLevelChanged(self, e):
+        cb = e.GetEventObject()
+        if e.IsChecked():
+            self.log_levels.add(LogLevel[cb.GetLabel()])
+        else:
+            self.log_levels.remove(LogLevel[cb.GetLabel()])
+
         filtered_log_messages = filter(lambda x: x.level in self.log_levels, self.log_messages)
         self.log_tc.SetValue('\n'.join(f'[{i.level.name[0]}] {i.tick}: {i.message}' for i in filtered_log_messages) + '\n')
         # scroll to bottom
@@ -662,15 +672,6 @@ class LogPanel(wx.Panel):
             self.log_tc.GetScrollRange(wx.VERTICAL)
         )
         self.log_tc.SetInsertionPoint(-1)
-
-
-    def OnLogLevelChanged(self, e):
-        cb = e.GetEventObject()
-        if e.IsChecked():
-            self.log_levels.add(LogLevel[cb.GetLabel()])
-        else:
-            self.log_levels.remove(LogLevel[cb.GetLabel()])
-        self.OnUpdateLog()
 
     def InitUI(self):
         sz = wx.BoxSizer(wx.VERTICAL)

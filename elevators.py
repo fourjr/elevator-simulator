@@ -1,7 +1,7 @@
 import threading
 import time
 import wx
-from managers import ElevatorManagerRandom
+from managers import ElevatorManagerKnuth
 
 class ElevatorManagerThread(threading.Thread):
     def __init__(self, window, event):
@@ -9,7 +9,7 @@ class ElevatorManagerThread(threading.Thread):
         self.window = window
         self.event = event
         self.speed = 3
-        self.manager = ElevatorManagerRandom(self, 10)
+        self.manager = ElevatorManagerKnuth(self, 10)
         self.active = False
         self.is_open = True
         self.current_tick = 0
@@ -62,5 +62,6 @@ class ElevatorManagerThread(threading.Thread):
         self.send_event()
 
     def reset(self, cls):
+        self.current_tick = 0
         self.manager = cls(self, self.manager.floors)
         self.send_event()
