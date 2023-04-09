@@ -1,5 +1,6 @@
 import random
-from models import Direction, ElevatorManager, Elevator
+from typing import List
+from models import Direction, ElevatorManager, Elevator, Load
 
 
 class ElevatorManagerRandom(ElevatorManager):
@@ -48,6 +49,11 @@ class ElevatorManagerKnuth(ElevatorManager):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.current_direction = {}
+        self.attended_to = set()
+
+    @property
+    def pending_loads(self) -> List[Load]:
+        return list(filter(lambda x: x.id not in self.attended_to, super().pending_loads))
 
     def _calculate_direction(self, elevator, destination_floor):
             if elevator.current_floor > destination_floor:
@@ -70,7 +76,9 @@ class ElevatorManagerKnuth(ElevatorManager):
                 self.current_direction[elevator.id] = None
                 return None
 
-            destination_floor = sorted(self.pending_loads, key=lambda x: x.tick_created)[0].initial_floor
+            go_to = sorted(self.pending_loads, key=lambda x: x.tick_created)[0]
+            self.attended_to.add(go_to.id)
+            destination_floor = go_to.initial_floor
 
         if self.current_direction.get(elevator.id) is None:
             self._calculate_direction(elevator, destination_floor)
@@ -96,6 +104,9 @@ class ElevatorManagerKnuth(ElevatorManager):
         if elevator.load == 0:
             # No more loads
             self.current_direction[elevator.id] = None
+        if load.id in self.attended_to:
+            self.attended_to.remove(load.id)
+
         return super().on_load_removed(load, elevator)
 
     def on_load_added(self, load, elevator):
