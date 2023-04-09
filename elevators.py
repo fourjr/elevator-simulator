@@ -12,15 +12,20 @@ class ElevatorManagerThread(threading.Thread):
         self.manager = ElevatorManagerRandom(self, 10)
         self.active = False
         self.is_open = True
-        self.tick_count = 0
+        self.current_tick = 0
         self.start()
 
     def run(self):
         while self.is_alive() and self.is_open:
             if self.active:
                 self.manager.cycle()
-                self.tick_count += 1
+                self.current_tick += 1
                 self.send_event()
+
+                if self.manager.loads:
+                    # only append if there are things going on
+                    for elevator in self.manager.elevators:
+                        self.manager.occupancy.append((elevator.load / self.manager.max_load) * 100)
 
             time.sleep(3 * (1/self.speed))
 

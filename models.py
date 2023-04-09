@@ -2,6 +2,7 @@ import copy
 from dataclasses import InitVar, dataclass, field
 from datetime import datetime
 from enum import IntEnum
+import random
 from typing import List
 
 
@@ -9,6 +10,29 @@ class Direction(IntEnum):
     UP = 1
     DOWN = -1
 
+
+class LogLevel(IntEnum):
+    TRACE = 1
+    DEBUG = 2
+    INFO = 3
+    WARNING = 4
+    ERROR = 5
+
+@dataclass
+class LogMessage:
+    """A log message object
+
+    Attributes:
+        level: LogLevel
+            The level of the log message
+        message: str
+            The message to log
+        tick: init
+            The tick the message was logged
+    """
+    level: LogLevel
+    message: str
+    tick: int
 
 class ElevatorError(Exception):
     pass
@@ -39,20 +63,21 @@ class Load:
             The floor the load is on
         destination_floor: int
             The floor the load wants to go to
-        load: int
+        weight: int
             The load in kg (human - 60)
         elevator: Optional[Elevator]
             Elevator the load is in
         tick_created: int
         enter_lift_tick: int
     """
+    id: int = field(init=False, default_factory=lambda: random.randint(0, 1000000))
     initial_floor: int
     destination_floor: int
     weight: int
     current_floor: int = field(init=False, default=None)
-    elevator: 'Elevator' = field(init=False, default=None)
-    time_created: int = field(init=False, default=None)
-    enter_lift_time: int = field(init=False, default=None)
+    elevator: 'Elevator' = field(init=False, default=None, repr=False)
+    tick_created: int = field(init=False, default=None, repr=False)
+    enter_lift_time: int = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
         self.current_floor = self.initial_floor
@@ -68,6 +93,12 @@ class ElevatorManager:
 
         self.wait_times = []
         self.time_in_lift = []
+        self.occupancy = []
+        self.name = self.__class__.__name__.replace("ElevatorManager", "")
+
+    @property
+    def pending_loads(self) -> List[Load]:
+        return [load for load in self.loads if load.elevator is None]
 
     def get_new_destination(self, elevator):
         """Gets a new destination for an elevator
@@ -76,6 +107,36 @@ class ElevatorManager:
             The elevator to get a new destination for
         """
         raise NotImplementedError('get_new_destination must be implemented in a subclass')
+
+    def pre_load_check(self, load, elevator):
+        """Checks if a load is allowed to enter the elevator
+
+        load: Load
+            The load to check
+        elevator: Elevator
+            The elevator to check
+        """
+        return True
+
+    def pre_unload_check(self, load, elevator):
+        """Checks if a load is allowed to leave the elevator
+
+        load: Load
+            The load to check
+        elevator: Elevator
+            The elevator to check
+        """
+        return True
+
+    def post_unload(self, load, elevator):
+        """Runs after a load is unloaded
+
+        load: Load
+            The load to check
+        elevator: Elevator
+            The elevator to check
+        """
+        pass
 
     def create_elevator(self, current_floor=1, attributes=None):
         """Creates a new elevator
@@ -102,7 +163,7 @@ class ElevatorManager:
             The floor the passenger wants to go to
         """
         load = Load(initial, destination, 60)
-        load.tick_created = self.thread.tick_count
+        load.tick_created = self.thread.current_tick
         self.loads.append(load)
 
     def cycle(self):
@@ -113,16 +174,19 @@ class ElevatorManager:
                 loads_to_add = []
                 for load in self.loads:
                     # add to elevator
-                    if load.elevator is None and load.current_floor == elevator.current_floor:
+                    if load.elevator is None and load.initial_floor == elevator.current_floor:
                         if (elevator.load + load.weight + sum(x.weight for x in loads_to_add)) > self.max_load:
                             continue
+                        if not self.pre_load_check(load, elevator):
+                            self.thread.window.WriteToLog(LogLevel.DEBUG, f'Load {load.id} failed preload for elevator {elevator.id}')
+                            continue
 
-                        self.thread.window.WriteToLog(f'{load} added to elevator {elevator.id}')
+                        self.thread.window.WriteToLog(LogLevel.INFO, f'Load {load.id} added to elevator {elevator.id}')
                         loads_to_add.append(load)
 
                         load.elevator = elevator
-                        load.enter_lift_tick = self.thread.tick_count
-                        wait_time = self.thread.tick_count - load.tick_created
+                        load.enter_lift_tick = self.thread.current_tick
+                        wait_time = self.thread.current_tick - load.tick_created
                         self.wait_times.append(wait_time)
 
                 if loads_to_add:
@@ -184,14 +248,25 @@ class Elevator:
         if abs(increment) != 1:
             raise BadArgument('Elevator can only move by 1 floor at a time')
 
-        self.thread.window.WriteToLog(f'Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}')
+        self.thread.window.WriteToLog(LogLevel.TRACE, f'Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}')
         self._current_floor += increment
 
+        to_remove = []
         for load in self.loads:
-            if load.destination_floor == self.current_floor:
-                self.thread.manager.time_in_lift.append(self.thread.tick_count - load.enter_lift_tick + 1)
-                self.loads.remove(load)
-            load.current_floor = self._current_floor
+            load.current_floor = self.current_floor
+
+            # unloading off elevator
+            if load.destination_floor == self.current_floor and self.thread.manager.pre_unload_check(load, self):
+                self.thread.window.WriteToLog(LogLevel.INFO, f'{load.id} unloaded from elevator {self.id}')
+                self.thread.manager.time_in_lift.append(self.thread.current_tick - load.enter_lift_tick + 1)
+                load.elevator = None
+                to_remove.append(load)
+
+        for load in to_remove:
+            self.loads.remove(load)
+            self.thread.manager.loads.remove(load)
+
+            self.thread.manager.post_unload(load, self)
 
     def cycle(self):
         """Runs a cycle of the elevator"""

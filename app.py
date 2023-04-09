@@ -4,7 +4,7 @@ import math
 from enum import IntEnum
 import random
 import statistics
-from typing import List
+from typing import List, Set
 
 import wx
 import wx.lib.scrolledpanel as scrolled
@@ -12,7 +12,8 @@ import wx.lib.newevent as wxne
 import wx.aui as aui
 
 from elevators import ElevatorManagerThread
-from managers import ElevatorManagerRandom, ElevatorManagerRolling
+from managers import ElevatorManagerRandom, ElevatorManagerRolling, ElevatorManagerKnuth
+from models import LogLevel, LogMessage
 
 class BaseFrame(wx.Frame):
     def __init__(self, title, *, size=wx.DefaultSize, pos=wx.DefaultPosition, window=None):
@@ -85,16 +86,14 @@ class BaseWindow(BaseFrame):
 
     def AddElevator(self, e, floor):
         self.manager_thread.add_elevator(floor)
-        self.WriteToLog(f'Add elevator on floor {floor}')
+        self.WriteToLog(LogLevel.INFO, f'Add elevator on floor {floor}')
 
     def Save(self, e):
         # TODO
-        self.WriteToLog('Save')
+        self.WriteToLog(LogLevel.INFO, 'Save')
 
-    def WriteToLog(self, message):
-        if self.log_tc is None:
-            return
-        self.log_tc.AppendText(f'{self.manager_thread.tick_count}: {message}\n')
+    def WriteToLog(self, level: LogLevel, message):
+        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnUpdateLog(LogMessage(level, message, self.manager_thread.current_tick))
 
     @property
     def active(self):
@@ -176,7 +175,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
 
 
         if updated:
-            self.window.WriteToLog("ElevatorsPanel Layout Updated")
+            self.window.WriteToLog(LogLevel.TRACE, "ElevatorsPanel Layout Updated")
             self.Layout()
             self.SetupScrolling(scroll_y=False)
 
@@ -211,6 +210,7 @@ class DebugPanel(wx.Panel):
         self.algorithms = {
             'Random': ElevatorManagerRandom,
             'Rolling': ElevatorManagerRolling,
+            'Knuth': ElevatorManagerKnuth,
 
         }
         self.InitUI()
@@ -225,7 +225,7 @@ class DebugPanel(wx.Panel):
                 i.SetRange(1, after.floors)
 
         if updated:
-            self.window.WriteToLog("DebugPanel Layout Updated")
+            self.window.WriteToLog(LogLevel.TRACE, "DebugPanel Layout Updated")
             self.Layout()
 
     def InitUI(self):
@@ -239,23 +239,20 @@ class DebugPanel(wx.Panel):
         sz.SetDimension(0, 0, 540, 400)
         self.SetSizer(sz)
 
-    def SetAlgorithm(self, e, algorithm):
+    def SetAlgorithm(self, algorithm):
         self.window.manager_thread.set_manager(self.algorithms[algorithm])
-        self.window.WriteToLog(f'Set algorithm to {algorithm}')
+        self.window.WriteToLog(LogLevel.INFO, f'Set algorithm to {algorithm}')
 
     def AddPassenger(self, floor_i, floor_f):
         if floor_i == floor_f:
-            self.WriteToLog(f'Passenger on floor {floor_i} to {floor_f} is not valid')
+            self.window.WriteToLog(LogLevel.WARNING, f'Passenger on floor {floor_i} to {floor_f} is not valid')
             return
         self.window.manager_thread.add_passenger(floor_i, floor_f)
-        self.window.WriteToLog(f'Add passenger on floor {floor_i} to {floor_f}')
+        self.window.WriteToLog(LogLevel.INFO, f'Add passenger on floor {floor_i} to {floor_f}')
 
     def AddRandomPassengers(self, count):
         for _ in range(count):
-            floor_i = random.randint(1, self.window.floors)
-            floor_f = random.randint(1, self.window.floors)
-            while floor_f == floor_i:
-                floor_f = random.randint(1, self.window.floors)
+            floor_i, floor_f = random.sample(range(1, self.window.floors + 1), 2)
             self.AddPassenger(floor_i, floor_f)
 
     def LoadControlPanel(self):
@@ -325,13 +322,9 @@ class DebugPanel(wx.Panel):
         algo_selection.SetSelection(0)
         algo_sz.Add(algo_selection, 1, wx.FIXED_MINSIZE)
 
-        # # button
-        algo_sz.AddSpacer(10)
-        set_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Set')
-        set_btn.Bind(wx.EVT_BUTTON, lambda e: self.SetAlgorithm(
-            e, algo_selection.GetString(algo_selection.GetCurrentSelection()))
+        algo_selection.Bind(wx.EVT_CHOICE, lambda _: self.SetAlgorithm(
+            algo_selection.GetString(algo_selection.GetCurrentSelection()))
         )
-        algo_sz.Add(set_btn, 1, wx.FIXED_MINSIZE)
 
         sz.Add(algo_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
@@ -348,12 +341,9 @@ class DebugPanel(wx.Panel):
 
         def set_speed_callback(_):
             self.window.manager_thread.set_speed(speed_selection.GetValue())
-            self.window.WriteToLog(f'Speed set to {speed_selection.GetValue()}')
+            self.window.WriteToLog(LogLevel.INFO, f'Speed set to {speed_selection.GetValue()}')
 
-        speed_sz.AddSpacer(10)
-        set_btn = wx.Button(panel, wx.ID_ANY, 'Set')
-        set_btn.Bind(wx.EVT_BUTTON, set_speed_callback)
-        speed_sz.Add(set_btn, 1, wx.FIXED_MINSIZE)
+        speed_selection.Bind(wx.EVT_SPINCTRLDOUBLE, set_speed_callback)
 
         sz.Add(speed_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
@@ -371,11 +361,9 @@ class DebugPanel(wx.Panel):
 
         def set_floors_callback(_):
             self.window.manager_thread.set_floors(floor_selection.GetValue())
-            self.window.WriteToLog(f"Setting floors to: {floor_selection.GetValue()}")
+            self.window.WriteToLog(LogLevel.INFO, f"Setting floors to: {floor_selection.GetValue()}")
 
-        set_floor_btn = wx.Button(panel, wx.ID_ANY, 'Set')
-        set_floor_btn.Bind(wx.EVT_BUTTON, set_floors_callback)
-        floor_sz.Add(set_floor_btn, 1, wx.FIXED_MINSIZE)
+        floor_selection.Bind(wx.EVT_SPINCTRL, set_floors_callback)
 
         sz.Add(floor_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
@@ -385,7 +373,7 @@ class DebugPanel(wx.Panel):
 
         def toggle_play_callback(_):
             self.window.active = not self.window.active
-            self.window.WriteToLog(f"Setting play state to: {self.window.active}")
+            self.window.WriteToLog(LogLevel.INFO, f"Setting play state to: {self.window.active}")
             play_btn.SetLabel('Play' if not self.window.active else 'Pause')
 
         play_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Play')
@@ -399,7 +387,7 @@ class DebugPanel(wx.Panel):
 
         def reset_callback(_):
             self.window.manager_thread.reset(self.algorithms[algo_selection.GetString(algo_selection.GetCurrentSelection())])
-            self.window.WriteToLog(f"Reset")
+            self.window.WriteToLog(LogLevel.INFO, f"Reset")
 
         reset_btn = wx.Button(panel, ID.BUTTON_ADD_PASSENGER, 'Reset')
         reset_btn.Bind(wx.EVT_BUTTON, reset_callback)
@@ -418,21 +406,18 @@ class DebugPanel(wx.Panel):
         sz.AddSpacer(10)
 
         # max capacity
-        cap_sz = wx.BoxSizer(wx.HORIZONTAL)
-        cap_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Max Load'), 1)
+        load_sz = wx.BoxSizer(wx.HORIZONTAL)
+        load_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Max Load'), 1)
         load_selection = wx.SpinCtrl(panel, initial=15, min=1, max=100)
-        cap_sz.Add(load_selection, 1, wx.FIXED_MINSIZE)
+        load_sz.Add(load_selection, 1, wx.FIXED_MINSIZE)
 
-        def set_cap_callback(_):
+        def set_load_callback(_):
             self.window.manager_thread.set_max_load(load_selection.GetValue() * 60)
-            self.window.WriteToLog(f"Setting max load to: {load_selection.GetValue()}")
+            self.window.WriteToLog(LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}")
 
-        cap_sz.AddSpacer(10)
-        set_btn = wx.Button(panel, wx.ID_ANY, 'Set')
-        set_btn.Bind(wx.EVT_BUTTON, set_cap_callback)
-        cap_sz.Add(set_btn, 1, wx.FIXED_MINSIZE)
+        load_selection.Bind(wx.EVT_SPINCTRL, set_load_callback)
 
-        sz.Add(cap_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
+        sz.Add(load_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
 
         # end
         sz.SetDimension(wx.Point(0, 0), self.size)
@@ -503,7 +488,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
             updated = True
 
         if updated:
-            self.window.WriteToLog("ElevatorStatusPanel Layout Updated")
+            self.window.WriteToLog(LogLevel.TRACE, "ElevatorStatusPanel Layout Updated")
             self.Layout()
             if before.floors != after.floors:
                 self.SetupScrolling()
@@ -515,15 +500,13 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         button_font.SetPointSize(18)
 
         text = wx.StaticText(self, wx.ID_ANY, str(num + 1))
-        text.SetFont(label_font)
-        self.sz.Add(text, 0, wx.FIXED_MINSIZE)
-        self.sz.AddSpacer(30)
+        text.SetFont(button_font)
+        self.sz.Add(text, 0, wx.FIXED_MINSIZE | wx.CENTER)
 
         up_text = wx.StaticText(self, wx.ID_ANY, '00')
         up_text.SetFont(button_font)
 
         self.sz.Add(up_text, 0, wx.FIXED_MINSIZE)
-        self.sz.AddSpacer(30)
 
         down_text = wx.StaticText(self, wx.ID_ANY, '00')
         down_text.SetFont(button_font)
@@ -533,19 +516,17 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         self.sz.Add(down_text, 0, wx.FIXED_MINSIZE)
 
     def InitUI(self):
-        self.sz = wx.FlexGridSizer(5)
+        self.sz = wx.FlexGridSizer(3, 1, 3)
 
         # header
         button_font = wx.Font(self.window.font)
         button_font.SetPointSize(18)
 
         self.sz.AddSpacer(30)
-        self.sz.AddSpacer(30)
 
         up_text = wx.StaticText(self, wx.ID_ANY, Unicode.UP)
         up_text.SetFont(button_font)
         self.sz.Add(up_text, 0, wx.FIXED_MINSIZE)
-        self.sz.AddSpacer(30)
 
         down_text = wx.StaticText(self, wx.ID_ANY, Unicode.DOWN)
         down_text.SetFont(button_font)
@@ -591,17 +572,17 @@ class StatsPanel(scrolled.ScrolledPanel):
         sz.SetDimension(0, 0, 350, 250)
         self.SetSizer(sz)
 
+    def update_stats(self, manager):
+        fmt_text = f'Tick: {manager.thread.current_tick}\nAlgorithm: {manager.name}\n\n(MIN/MEAN/MED/MAX)\n\n'
+        fmt_text += f'Wait Time: {generate_stats(manager.wait_times)}\n'
+        fmt_text += f'Time in Lift: {generate_stats(manager.time_in_lift)}\n'
+        fmt_text += f'Occupancy: {generate_stats(manager.occupancy)}'
+        self.stats_tc.SetValue(fmt_text)
+
     def OnUpdateElevators(self, before, after):
-        updated = False
-        if before.wait_times != after.wait_times or before.time_in_lift != after.time_in_lift:
-            updated = True
-            fmt_text = '(MIN/MEAN/MED/MAX)\n\n'
-            fmt_text += f'Wait Time: {generate_stats(after.wait_times)}\n'
-            fmt_text += f'Time in Lift: {generate_stats(after.time_in_lift)}' 
-            self.stats_tc.SetValue(fmt_text)
+        self.update_stats(after)
 
         if before.loads != after.loads:
-            updated = True
             # floor panel
             floor_fmt = ''
             floors = defaultdict(Counter)
@@ -619,16 +600,17 @@ class StatsPanel(scrolled.ScrolledPanel):
                 self.elevator_tc.SetValue(elevator_fmt)
             if self.floor_tc.GetValue() != floor_fmt:
                 self.floor_tc.SetValue(floor_fmt)
-        if updated:
-            self.window.WriteToLog("StatsPanel Layout Updated")
-            self.Layout()
-            self.SetupScrolling()
+
+        self.window.WriteToLog(LogLevel.TRACE, "StatsPanel Layout Updated")
+        self.Layout()
+        self.SetupScrolling()
 
     def LoadStatsPanel(self):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        self.stats_tc = wx.TextCtrl(panel, wx.ID_ANY, '(MIN/MAX/MEAN/MED)\n\nWait Time: 0/0/0/0\nTime in Lift: 0/0/0/0', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP)
+        self.stats_tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP)
+        self.update_stats(self.window.manager_thread.manager)
         sz.Add(self.stats_tc, 1, wx.EXPAND)
 
         sz.SetDimension(0, 0, 350, 250)
@@ -661,18 +643,55 @@ class LogPanel(wx.Panel):
     def __init__(self, window):
         # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
         self.window = window
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(350, 380), pos=wx.Point(730, 260), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(id=ID.PANEL_DEBUG_LOG, parent=window, size=wx.Size(350, 380), pos=wx.Point(730, 260), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
 
+        self.log_messages: List[LogMessage] = []
+        self.log_levels: Set[LogLevel] = set(LogLevel)
+        self.log_levels.remove(LogLevel.TRACE)
+        self.log_levels.remove(LogLevel.DEBUG)
         self.InitUI()
+
+    def OnUpdateLog(self, message=None):
+        if message is not None:
+            self.log_messages.append(message)
+        filtered_log_messages = filter(lambda x: x.level in self.log_levels, self.log_messages)
+        self.log_tc.SetValue('\n'.join(f'[{i.level.name[0]}] {i.tick}: {i.message}' for i in filtered_log_messages) + '\n')
+        # scroll to bottom
+        self.log_tc.SetScrollPos(
+            wx.VERTICAL,
+            self.log_tc.GetScrollRange(wx.VERTICAL)
+        )
+        self.log_tc.SetInsertionPoint(-1)
+
+
+    def OnLogLevelChanged(self, e):
+        cb = e.GetEventObject()
+        if e.IsChecked():
+            self.log_levels.add(LogLevel[cb.GetLabel()])
+        else:
+            self.log_levels.remove(LogLevel[cb.GetLabel()])
+        self.OnUpdateLog()
 
     def InitUI(self):
         sz = wx.BoxSizer(wx.VERTICAL)
         sz.Add(wx.StaticText(self, wx.ID_ANY, 'Log'))
         sz.AddSpacer(3)
         _, height = sz.GetMinSize()
-        self.window.log_tc = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL, size=wx.Size(350, 380 - height - 10))
-        self.window.WriteToLog('Log started')
-        sz.Add(self.window.log_tc, 1, wx.EXPAND)
+        self.log_tc = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL, size=wx.Size(350, 380 - height - 100))
+        self.window.WriteToLog(LogLevel.INFO, 'Log started')
+        sz.Add(self.log_tc, 1, wx.EXPAND)
+
+        checkbox_sz = wx.FlexGridSizer(3, 1, 1)
+
+        for i in LogLevel:
+            cb = wx.CheckBox(self, wx.ID_ANY, i.name)
+            if i in self.log_levels:
+                cb.SetValue(True)
+            checkbox_sz.Add(cb)
+
+            self.Bind(wx.EVT_CHECKBOX, self.OnLogLevelChanged, cb)
+
+        sz.Add(checkbox_sz, 0, wx.EXPAND)
 
         sz.SetDimension(0, 0, 350, 380)
         self.SetSizer(sz)
