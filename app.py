@@ -306,13 +306,13 @@ class DebugPanel(wx.Panel):
 
     def _export_simulation(self):
         dt = datetime.now().isoformat(sep=' ', timespec='seconds').replace(':', '-').replace(' ', '_')
-        fn = f'{self.window.current_algorithm.name}_{dt}.esi'
+        fn = f'{dt}_{self.window.current_algorithm.name}.esi'
         if not os.path.isdir('exports'):
             os.mkdir('exports')
 
         with open(f'exports/{fn}', 'wb') as f:
             f.write(
-                f'fourjr/elevator-simulator {dt} fourjr/elevator-simulator'.encode('utf8') +
+                f'fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00'.encode('utf8') +
                 gzip.compress(pickle.dumps(self.window.manager_thread.manager)) +
                 f'\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator'.encode('utf8')
             )
