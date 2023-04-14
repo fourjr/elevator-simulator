@@ -1,15 +1,17 @@
 import threading
 import time
 import wx
-from managers import ElevatorManagerKnuth
+
+from models import ElevatorManager
+
 
 class ElevatorManagerThread(threading.Thread):
-    def __init__(self, window, event):
+    def __init__(self, window, event, manager: ElevatorManager):
         super().__init__()
         self.window = window
         self.event = event
         self.speed = 3
-        self.manager = ElevatorManagerKnuth(self, 10)
+        self.manager = manager(self, 10)
         self.active = False
         self.is_open = True
         self.current_tick = 0
@@ -25,9 +27,11 @@ class ElevatorManagerThread(threading.Thread):
                 if self.manager.loads:
                     # only append if there are things going on
                     for elevator in self.manager.elevators:
-                        self.manager.occupancy.append((elevator.load / self.manager.max_load) * 100)
+                        self.manager.occupancy.append(
+                            (elevator.load / self.manager.max_load) * 100
+                        )
 
-            time.sleep(3 * (1/self.speed))
+            time.sleep(3 * (1 / self.speed))
 
             # speed: 3 seconds per floor (1x)
 
@@ -37,6 +41,10 @@ class ElevatorManagerThread(threading.Thread):
 
     def add_elevator(self, current_floor, attributes=None):
         self.manager.create_elevator(current_floor, attributes)
+        self.send_event()
+
+    def remove_elevator(self, elevator_id):
+        self.manager.remove_elevator(elevator_id)
         self.send_event()
 
     def set_floors(self, floors):
@@ -54,7 +62,12 @@ class ElevatorManagerThread(threading.Thread):
         self.send_event()
 
     def set_manager(self, cls):
-        self.manager = cls(self, self.manager.floors, elevators=self.manager.elevators, loads=self.manager.loads)
+        self.manager = cls(
+            self,
+            self.manager.floors,
+            elevators=self.manager.elevators,
+            loads=self.manager.loads,
+        )
         self.send_event()
 
     def set_max_load(self, new_max_load):

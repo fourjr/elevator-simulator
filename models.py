@@ -1,22 +1,10 @@
-import copy
-from dataclasses import InitVar, dataclass, field
-from datetime import datetime
-from enum import IntEnum
 import random
+from dataclasses import dataclass, field
 from typing import List
 
+from enums import Direction, LogLevel
+from errors import BadArgument, FullElevator
 
-class Direction(IntEnum):
-    UP = 1
-    DOWN = -1
-
-
-class LogLevel(IntEnum):
-    TRACE = 1
-    DEBUG = 2
-    INFO = 3
-    WARNING = 4
-    ERROR = 5
 
 @dataclass
 class LogMessage:
@@ -30,28 +18,10 @@ class LogMessage:
         tick: init
             The tick the message was logged
     """
+
     level: LogLevel
     message: str
     tick: int
-
-class ElevatorError(Exception):
-    pass
-
-
-class FullElevator(ElevatorError):
-    """Raised when an elevator is full and unable to add new load"""
-    def __init__(self, elevator_id) -> None:
-        super().__init__(f'{elevator_id} is full, unable to add new load')
-
-
-class BadArgument(ElevatorError):
-    """Raised when arguments provided are not of a valid type or format"""
-    pass
-
-
-class ElevatorRunError(ElevatorError):
-    """Raised when the elevator is unable to run during an automated process"""
-    pass
 
 
 @dataclass
@@ -70,20 +40,23 @@ class Load:
         tick_created: int
         enter_lift_tick: int
     """
+
     id: int = field(init=False, default_factory=lambda: random.randint(0, 1000000))
     initial_floor: int
     destination_floor: int
     weight: int
     current_floor: int = field(init=False, default=None)
-    elevator: 'Elevator' = field(init=False, default=None, repr=False)
+    elevator: "Elevator" = field(init=False, default=None, repr=False)
     tick_created: int = field(init=False, default=None, repr=False)
     enter_lift_time: int = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
         self.current_floor = self.initial_floor
 
+
 class ElevatorManager:
     """A global class that houses the elevators"""
+
     def __init__(self, thread, floors, *, elevators=None, loads=None) -> None:
         self.thread = thread
         self.floors = floors
@@ -94,7 +67,6 @@ class ElevatorManager:
         self.wait_times = []
         self.time_in_lift = []
         self.occupancy = []
-        self.name = self.__class__.__name__.replace("ElevatorManager", "")
 
     @property
     def pending_loads(self) -> List[Load]:
@@ -106,7 +78,9 @@ class ElevatorManager:
         elevator: Elevator
             The elevator to get a new destination for
         """
-        raise NotImplementedError('get_new_destination must be implemented in a subclass')
+        raise NotImplementedError(
+            "get_new_destination must be implemented in a subclass"
+        )
 
     def pre_load_check(self, load, elevator):
         """Checks if a load is allowed to enter the elevator
@@ -172,6 +146,18 @@ class ElevatorManager:
         self.elevators.append(elevator)
         return elevator
 
+    def remove_elevator(self, elevator_id):
+        """Removes an elevator
+
+        elevator: Elevator
+            The elevator to remove
+        """
+        for elevator in self.elevators:
+            if elevator.id == elevator_id:
+                self.elevators.remove(elevator)
+                return
+        raise BadArgument(f"No elevator with id {elevator_id}")
+
     def add_passenger(self, initial, destination):
         """Adds a passenger
 
@@ -193,14 +179,27 @@ class ElevatorManager:
                 loads_to_add = []
                 for load in self.loads:
                     # add to elevator
-                    if load.elevator is None and load.initial_floor == elevator.current_floor:
-                        if (elevator.load + load.weight + sum(x.weight for x in loads_to_add)) > self.max_load:
+                    if (
+                        load.elevator is None
+                        and load.initial_floor == elevator.current_floor
+                    ):
+                        if (
+                            elevator.load
+                            + load.weight
+                            + sum(x.weight for x in loads_to_add)
+                        ) > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
-                            self.thread.window.WriteToLog(LogLevel.DEBUG, f'Load {load.id} failed preload for elevator {elevator.id}')
+                            self.thread.window.WriteToLog(
+                                LogLevel.DEBUG,
+                                f"Load {load.id} failed preload for elevator {elevator.id}",
+                            )
                             continue
 
-                        self.thread.window.WriteToLog(LogLevel.INFO, f'Load {load.id} added to elevator {elevator.id}')
+                        self.thread.window.WriteToLog(
+                            LogLevel.INFO,
+                            f"Load {load.id} added to elevator {elevator.id}",
+                        )
                         loads_to_add.append(load)
                         load.elevator = elevator
                         load.enter_lift_tick = self.thread.current_tick
@@ -213,8 +212,9 @@ class ElevatorManager:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['thread']
+        del state["thread"]
         return state
+
 
 class Elevator:
     def __init__(self, thread, elevator_id, current_floor=1, attributes=None) -> None:
@@ -262,9 +262,12 @@ class Elevator:
             The number of floors to move the elevator by (-1 or 1)
         """
         if abs(increment) != 1:
-            raise BadArgument('Elevator can only move by 1 floor at a time')
+            raise BadArgument("Elevator can only move by 1 floor at a time")
 
-        self.thread.window.WriteToLog(LogLevel.TRACE, f'Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}')
+        self.thread.window.WriteToLog(
+            LogLevel.TRACE,
+            f"Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}",
+        )
         self._current_floor += increment
 
         to_remove = []
@@ -272,9 +275,16 @@ class Elevator:
             load.current_floor = self.current_floor
 
             # unloading off elevator
-            if load.destination_floor == self.current_floor and self.thread.manager.pre_unload_check(load, self):
-                self.thread.window.WriteToLog(LogLevel.INFO, f'{load.id} unloaded from elevator {self.id}')
-                self.thread.manager.time_in_lift.append(self.thread.current_tick - load.enter_lift_tick + 1)
+            if (
+                load.destination_floor == self.current_floor
+                and self.thread.manager.pre_unload_check(load, self)
+            ):
+                self.thread.window.WriteToLog(
+                    LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
+                )
+                self.thread.manager.time_in_lift.append(
+                    self.thread.current_tick - load.enter_lift_tick + 1
+                )
                 load.elevator = None
                 to_remove.append(load)
 
@@ -308,14 +318,17 @@ class Elevator:
             A list of loads to add to the elevator
         """
         # Take a person as 60kg on average
-        if self.thread.manager.max_load is not None and self.load + load.weight > self.thread.manager.max_load:
+        if (
+            self.thread.manager.max_load is not None
+            and self.load + load.weight > self.thread.manager.max_load
+        ):
             raise FullElevator(self.id)
 
         self.loads.append(load)
         self.thread.manager.on_load_added(load, self)
 
     def __repr__(self) -> str:
-        return f'<Elevator {self.id} load={self.load}>'
+        return f"<Elevator {self.id} load={self.load}>"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Elevator):
@@ -324,5 +337,5 @@ class Elevator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['thread']
+        del state["thread"]
         return state
