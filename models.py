@@ -1,9 +1,142 @@
 import random
 from dataclasses import dataclass, field
+import statistics
 from typing import List
 
 from enums import Direction, LogLevel
 from errors import BadArgument, FullElevator
+
+
+@dataclass
+class GeneratedStats:
+    values: List[float | int] = field(default_factory=list)
+
+    def append(self, value: float | int):
+        self.values.append(value)
+
+    @property
+    def mean(self):
+        if len(self.values) == 0:
+            return 0
+        return statistics.mean(self.values)
+
+    @property
+    def median(self):
+        if len(self.values) == 0:
+            return 0
+        return statistics.median(self.values)
+
+    @property
+    def minimum(self):
+        if len(self.values) == 0:
+            return 0
+        return min(self.values)
+
+    @property
+    def maximum(self):
+        if len(self.values) == 0:
+            return 0
+        return max(self.values)
+
+    def __str__(self):
+        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
+
+    def __or__(self, other: 'GeneratedStats') -> 'CombinedStats':
+        """Combine two GeneratedStats objects using the | operator"""
+        if not isinstance(other, GeneratedStats):
+            return super().__or__(other)
+
+        return CombinedStats([self, other])
+
+    def to_dict(self):
+        return {
+            'mean': self.mean,
+            'median': self.median,
+            'minimum': self.minimum,
+            'maximum': self.maximum,
+        }
+
+@dataclass
+class CombinedStats:
+    stats: List[GeneratedStats | int] = field(default_factory=list)
+
+    def append(self, stat: GeneratedStats):
+        self.stats.append(stat)
+
+    def extend(self, stats: List[GeneratedStats]):
+        self.stats.extend(stats)
+
+    @property
+    def mean(self):
+        if len(self.stats) == 0:
+            return 0
+        if isinstance(self.stats[0], int):
+            return statistics.mean(self.stats)
+
+        return statistics.mean([stat.mean for stat in self.stats])
+
+    @property
+    def median(self):
+        if len(self.stats) == 0:
+            return 0
+
+        if isinstance(self.stats[0], int):
+            return statistics.median(self.stats)
+
+        return statistics.mean([stat.median for stat in self.stats])
+
+    @property
+    def minimum(self):
+        if len(self.stats) == 0:
+            return 0
+
+        if isinstance(self.stats[0], int):
+            return min(self.stats)
+
+        return statistics.mean([stat.minimum for stat in self.stats])
+
+    @property
+    def maximum(self):
+        if len(self.stats) == 0:
+            return 0
+
+        if isinstance(self.stats[0], int):
+            return max(self.stats)
+
+        return statistics.mean([stat.maximum for stat in self.stats])
+
+    def __str__(self):
+        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
+
+    def __or__(self, other: 'GeneratedStats') -> 'CombinedStats':
+        """Combines another GeneratedStats object using the | operator"""
+        if not isinstance(other, GeneratedStats):
+            return super().__or__(other)
+
+        return CombinedStats(self.stats + [other])
+
+    def to_dict(self):
+        return {
+            'mean': self.mean,
+            'median': self.median,
+            'minimum': self.minimum,
+            'maximum': self.maximum,
+        }
+
+@dataclass
+class SimulationStats:
+    ticks: int
+    algorithm_name: str
+    wait_time: GeneratedStats
+    time_in_lift: GeneratedStats
+    occupancy: GeneratedStats
+
+    def __str__(self) -> str:
+        fmt_text = f'Tick: {self.ticks}\nAlgorithm: {self.algorithm_name}\n\n(MIN/MEAN/MED/MAX)\n\n'
+        fmt_text += f'Wait Time: {self.wait_time}\n'
+        fmt_text += f'Time in Lift: {self.time_in_lift}\n'
+        fmt_text += f'Occupancy: {self.occupancy}'
+        return fmt_text
 
 
 @dataclass
@@ -64,13 +197,29 @@ class ElevatorManager:
         self.loads: List[Load] = loads or []
         self.max_load = 15 * 60
 
-        self.wait_times = []
-        self.time_in_lift = []
-        self.occupancy = []
+        self.tick_count = 0
+        self.wait_times = GeneratedStats()
+        self.time_in_lift = GeneratedStats()
+        self.occupancy = GeneratedStats()
+
+    @property
+    def stats(self):
+        return SimulationStats(
+            ticks=self.tick_count,
+            algorithm_name=self.name,
+            wait_time=self.wait_times,
+            time_in_lift=self.time_in_lift,
+            occupancy=self.occupancy,
+        )
 
     @property
     def pending_loads(self) -> List[Load]:
         return [load for load in self.loads if load.elevator is None]
+
+    @property
+    def simulation_running(self) -> bool:
+        """Returns True if there are loads in the system"""
+        return len(self.loads) > 0
 
     def get_new_destination(self, elevator):
         """Gets a new destination for an elevator
@@ -118,7 +267,7 @@ class ElevatorManager:
 
     def post_tick(self):
         """Runs at the end of every tick"""
-        pass
+        self.tick_count += 1
 
     def on_load_added(self, load, elevator):
         """Runs when a load is added to an elevator
@@ -190,13 +339,13 @@ class ElevatorManager:
                         ) > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
-                            self.thread.window.WriteToLog(
+                            self.thread.parent.WriteToLog(
                                 LogLevel.DEBUG,
                                 f"Load {load.id} failed preload for elevator {elevator.id}",
                             )
                             continue
 
-                        self.thread.window.WriteToLog(
+                        self.thread.parent.WriteToLog(
                             LogLevel.INFO,
                             f"Load {load.id} added to elevator {elevator.id}",
                         )
@@ -264,7 +413,7 @@ class Elevator:
         if abs(increment) != 1:
             raise BadArgument("Elevator can only move by 1 floor at a time")
 
-        self.thread.window.WriteToLog(
+        self.thread.parent.WriteToLog(
             LogLevel.TRACE,
             f"Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}",
         )
@@ -279,7 +428,7 @@ class Elevator:
                 load.destination_floor == self.current_floor
                 and self.thread.manager.pre_unload_check(load, self)
             ):
-                self.thread.window.WriteToLog(
+                self.thread.parent.WriteToLog(
                     LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
                 )
                 self.thread.manager.time_in_lift.append(

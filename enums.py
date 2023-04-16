@@ -7,6 +7,7 @@ class ID(IntEnum):
     PANEL_DEBUG_LOG = 122
 
     BUTTON_ADD_PASSENGER = 21
+    BUTTON_CONTROL_PLAY = 22
 
     MENU_APP_EXIT = 310
 

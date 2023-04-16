@@ -19,47 +19,32 @@ from elevators import ElevatorManagerThread
 from enums import ID
 from errors import BadArgument, InvalidManager
 from models import ElevatorManager, LogLevel, LogMessage
-from utils import Constants, Unicode, generate_stats
+from utils import Constants, Unicode, load_algorithms
 
 
-(UpdateElevators, EVT_UPDATE_ELEVATORS) = wxne.NewEvent()
+(UpdateManager, EVT_UPDATE_MANAGER) = wxne.NewEvent()
 
 
 class BaseWindow(wx.Frame):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__(None, title='flying things that move vertically', pos=wx.Point(0, 0), size=wx.Size(1080, 720))
+        self.app = app
         self.font = wx.Font(13, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'Segoue UI')
         self.log_tc = None
         self.speed = 1
         self.algo = None
         self.effective_size = wx.Size(1000, 640)
 
-        self._load_algorithms()
+        self.algorithms = load_algorithms()
         self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
 
-        self.manager_thread = ElevatorManagerThread(self, UpdateElevators, self.current_algorithm)
+        self.manager_thread = ElevatorManagerThread(self, UpdateManager, self.current_algorithm)
         self.manager = copy.deepcopy(self.manager_thread.manager)
 
-        self.Bind(EVT_UPDATE_ELEVATORS, self.OnUpdateElevators)
+        self.Bind(EVT_UPDATE_MANAGER, self.OnUpdateManager)
         self.Bind(wx.EVT_CLOSE, self.Close)
         self.SetBackgroundColour('white')
         self.InitMenuBar()
-
-    def _load_algorithms(self):
-        self.algorithms = {}
-        for i in glob.iglob('managers/*.py'):
-            module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
-            if not hasattr(module, '__manager__'):
-                raise InvalidManager(f'Manager in {module} is not defined')
-            if not hasattr(module, '__name__'):
-                raise InvalidManager(f'Name in {module} is not defined')
-
-            manager = module.__manager__
-            if not issubclass(manager, ElevatorManager):
-                raise InvalidManager(f'Manager in {module} is not a subclass of ElevatorManager')
-
-            manager.name = module.__name__
-            self.algorithms[manager.name] = manager
 
     def _import_simulation(self, fn):
         # TODO
@@ -79,10 +64,14 @@ class BaseWindow(wx.Frame):
         self.SetMenuBar(menubar)
         self.SetFont(self.font)
 
-    def OnUpdateElevators(self, e: wx.Event):
+    def OnUpdateManager(self, e: wx.Event):
         for c in list(self.GetChildren()):
-            if hasattr(c, 'OnUpdateElevators'):
-                c.OnUpdateElevators(self.manager, e.manager)
+            if hasattr(c, 'OnUpdateManager'):
+                c.OnUpdateManager(self.manager, e.manager)
+
+        if self.app.test_suite is not None:
+            self.app.test_suite.on_update_manager(self.manager, e.manager)
+
         self.manager = copy.deepcopy(e.manager)
 
     def Close(self, *_):
@@ -99,7 +88,7 @@ class BaseWindow(wx.Frame):
 
     @active.setter
     def active(self, value):
-        self.manager_thread.active = value
+        self.manager_thread.set_active(value)
 
     @property
     def floors(self):
@@ -140,7 +129,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
 
         self.sz.Add(elevator_box, 1, wx.ALL | wx.CENTRE, 10)
 
-    def OnUpdateElevators(self, before, after):
+    def OnUpdateManager(self, before, after):
         # changes to track: current_floor, destination, new elevators
         updated = False
         if len(before.elevators) > 6 and len(after.elevators) <= 6:
@@ -205,7 +194,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
         self.SetSizer(self.sz)
 
 
-class DebugPanel(wx.Panel):
+class ControlPanel(wx.Panel):
     def __init__(self, window):
         self.window = window
         # if self.window.positions['debug'] is None:
@@ -218,7 +207,7 @@ class DebugPanel(wx.Panel):
 
         self.InitUI()
 
-    def OnUpdateElevators(self, before, after):
+    def OnUpdateManager(self, before, after):
         # changes to track: current_floor, destination, new elevators
         updated = False
 
@@ -251,11 +240,11 @@ class DebugPanel(wx.Panel):
         sz.SetDimension(0, 0, 540, 400)
         self.SetSizer(sz)
 
-    def _add_elevator(self, floor):
+    def add_elevator(self, floor):
         self.window.manager_thread.add_elevator(floor)
         self.window.WriteToLog(LogLevel.INFO, f'Added elevator on floor {floor}')
 
-    def _remove_elevator(self, elevator_id):
+    def remove_elevator(self, elevator_id):
         try:
             elevator_id = int(elevator_id)
         except ValueError:
@@ -270,7 +259,7 @@ class DebugPanel(wx.Panel):
 
         self.window.WriteToLog(LogLevel.INFO, f'Removed elevator {elevator_id}')
 
-    def _add_passenger(self, floor_i, floor_f):
+    def add_passenger(self, floor_i, floor_f):
         if floor_i == floor_f:
             self.window.WriteToLog(LogLevel.ERROR, f'Passenger on floor {floor_i} to {floor_f} is not valid')
             return
@@ -280,32 +269,32 @@ class DebugPanel(wx.Panel):
     def _add_random_passengers(self, count):
         for _ in range(count):
             floor_i, floor_f = random.sample(range(1, self.window.floors + 1), 2)
-            self._add_passenger(floor_i, floor_f)
+            self.add_passenger(floor_i, floor_f)
 
-    def _set_algorithm(self, algorithm):
-        if algorithm not in self.window.algorithms:
-            self.window.WriteToLog(LogLevel.ERROR, f'Algorithm {algorithm} not found')
+    def set_algorithm(self, algorithm_name):
+        if algorithm_name not in self.window.algorithms:
+            self.window.WriteToLog(LogLevel.ERROR, f'Algorithm {algorithm_name} not found')
             return
 
-        self.window.manager_thread.set_manager(self.window.algorithms[algorithm])
-        self.window.current_algorithm = self.window.algorithms[algorithm]
-        self.window.WriteToLog(LogLevel.INFO, f'Set algorithm to {algorithm}')
+        self.window.manager_thread.set_manager(self.window.algorithms[algorithm_name])
+        self.window.current_algorithm = self.window.algorithms[algorithm_name]
+        self.window.WriteToLog(LogLevel.INFO, f'Set algorithm to {algorithm_name}')
 
-    def _set_speed(self, speed):
+    def set_speed(self, speed):
         self.window.manager_thread.set_speed(speed)
         self.window.WriteToLog(LogLevel.INFO, f'Speed set to {speed}')
 
-    def _set_floors(self, floor):
-        self.window.manager_thread.set_floors(floor)
-        self.window.WriteToLog(LogLevel.INFO, f"Setting floors to: {floor}")
+    def set_floors(self, floor_count):
+        self.window.manager_thread.set_floors(floor_count)
+        self.window.WriteToLog(LogLevel.INFO, f"Setting floors to: {floor_count}")
 
-    def _toggle_play(self, play_btn):
+    def toggle_play(self):
         self.window.active = not self.window.active
         self.window.WriteToLog(LogLevel.INFO, f"Setting play state to: {self.window.active}")
-        play_btn.SetLabel('Play' if not self.window.active else 'Pause')
+        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel('Play' if not self.window.active else 'Pause')
 
-    def _export_simulation(self):
-        dt = datetime.now().isoformat(sep=' ', timespec='seconds').replace(':', '-').replace(' ', '_')
+    def export_simulation(self):
+        dt = datetime.now().isoformat().replace(':', '-')
         fn = f'{dt}_{self.window.current_algorithm.name}.esi'
         if not os.path.isdir('exports'):
             os.mkdir('exports')
@@ -319,7 +308,7 @@ class DebugPanel(wx.Panel):
 
         self.window.WriteToLog(LogLevel.INFO, f'Exported as {fn}')
 
-    def _reset_simulation(self):
+    def reset_simulation(self):
         self.window.manager_thread.reset(self.window.current_algorithm)
         self.window.WriteToLog(LogLevel.INFO, f"Reset")
 
@@ -340,7 +329,7 @@ class DebugPanel(wx.Panel):
         add_elevator_btn = wx.Button(panel, wx.ID_ANY, 'Add')
         add_elevator_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._add_elevator(ef_add_selection.GetValue())
+            lambda _: self.add_elevator(ef_add_selection.GetValue())
         )
         elevator_sz.Add(add_elevator_btn, 0, wx.FIXED_MINSIZE)
 
@@ -351,7 +340,7 @@ class DebugPanel(wx.Panel):
         add_elevator_btn = wx.Button(panel, wx.ID_ANY, 'Remove')
         add_elevator_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._remove_elevator(ef_remove_selection.GetValue())
+            lambda _: self.remove_elevator(ef_remove_selection.GetValue())
         )
         elevator_sz.Add(add_elevator_btn, 0, wx.FIXED_MINSIZE)
 
@@ -370,7 +359,7 @@ class DebugPanel(wx.Panel):
         add_passenger_btn = wx.Button(panel, wx.ID_ANY, 'Add')
         add_passenger_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._add_passenger(pfi_selection.GetValue(), pff_selection.GetValue())
+            lambda _: self.add_passenger(pfi_selection.GetValue(), pff_selection.GetValue())
         )
         passenger_sz.Add(add_passenger_btn, 0, wx.FIXED_MINSIZE)
         passenger_sz.AddSpacer(20)
@@ -400,7 +389,7 @@ class DebugPanel(wx.Panel):
 
         algo_selection.Bind(
             wx.EVT_CHOICE,
-            lambda _: self._set_algorithm(algo_selection.GetString(algo_selection.GetCurrentSelection()))
+            lambda _: self.set_algorithm(algo_selection.GetString(algo_selection.GetCurrentSelection()))
         )
 
         sz.Add(algo_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -416,7 +405,7 @@ class DebugPanel(wx.Panel):
 
         speed_selection.Bind(
             wx.EVT_SPINCTRLDOUBLE,
-            lambda _: self._set_speed(speed_selection.GetValue())
+            lambda _: self.set_speed(speed_selection.GetValue())
         )
 
         sz.Add(speed_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -434,7 +423,7 @@ class DebugPanel(wx.Panel):
 
         floor_selection.Bind(
             wx.EVT_SPINCTRL,
-            lambda _: self._set_floors(floor_selection.GetValue())
+            lambda _: self.set_floors(floor_selection.GetValue())
         )
 
         sz.Add(floor_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -443,17 +432,17 @@ class DebugPanel(wx.Panel):
         # control
         ctrl_sz = wx.BoxSizer(wx.HORIZONTAL)
 
-        play_btn = wx.Button(panel, wx.ID_ANY, 'Play')
+        play_btn = wx.Button(panel, ID.BUTTON_CONTROL_PLAY, 'Play')
         play_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._toggle_play(play_btn)
+            lambda _: self._toggle_play()
         )
         ctrl_sz.Add(play_btn, 1, wx.FIXED_MINSIZE)
 
         save_btn = wx.Button(panel, wx.ID_ANY, 'Export')
         save_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._export_simulation()
+            lambda _: self.export_simulation()
         )
         ctrl_sz.Add(save_btn, 1, wx.FIXED_MINSIZE)
         ctrl_sz.AddSpacer(10)
@@ -461,7 +450,7 @@ class DebugPanel(wx.Panel):
         reset_btn = wx.Button(panel, wx.ID_ANY, 'Reset')
         reset_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._reset_simulation()
+            lambda _: self.reset_simulation()
         )
         ctrl_sz.Add(reset_btn, 1, wx.FIXED_MINSIZE)
         ctrl_sz.AddSpacer(10)
@@ -515,7 +504,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         self.rows = []
         self.InitUI()
 
-    def OnUpdateElevators(self, before, after):
+    def OnUpdateManager(self, before, after):
         # Number of floors and loads
         updated = False
         if before.floors < after.floors:
@@ -631,17 +620,17 @@ class StatsPanel(scrolled.ScrolledPanel):
         self.SetSizer(sz)
 
     def update_stats(self, manager):
-        fmt_text = f'Tick: {manager.thread.current_tick}\nAlgorithm: {manager.name}\n\n(MIN/MEAN/MED/MAX)\n\n'
-        fmt_text += f'Wait Time: {generate_stats(manager.wait_times)}\n'
-        fmt_text += f'Time in Lift: {generate_stats(manager.time_in_lift)}\n'
-        fmt_text += f'Occupancy: {generate_stats(manager.occupancy)}'
-        self.stats_tc.SetValue(fmt_text)
+        self.stats_tc.SetValue(str(manager.stats))
 
-    def OnUpdateElevators(self, before, after):
-        self.update_stats(after)
+    def OnUpdateManager(self, before, after):
+        updated = False
+        if str(before.stats) != str(after.stats):
+            updated = True
+            self.update_stats(after)
 
         if before.loads != after.loads:
             # floor panel
+            updated = True
             floor_fmt = ''
             floors = defaultdict(Counter)
             elevators = defaultdict(Counter)
@@ -657,11 +646,13 @@ class StatsPanel(scrolled.ScrolledPanel):
             if self.elevator_tc.GetValue() != elevator_fmt:
                 self.elevator_tc.SetValue(elevator_fmt)
             if self.floor_tc.GetValue() != floor_fmt:
+
                 self.floor_tc.SetValue(floor_fmt)
 
-        self.window.WriteToLog(LogLevel.TRACE, "StatsPanel Layout Updated")
-        self.Layout()
-        self.SetupScrolling()
+        if updated:
+            self.window.WriteToLog(LogLevel.TRACE, "StatsPanel Layout Updated")
+            self.Layout()
+            self.SetupScrolling()
 
     def LoadStatsPanel(self):
         panel = wx.Panel(self.nb, wx.ID_ANY)
@@ -754,27 +745,47 @@ class LogPanel(wx.Panel):
         sz.SetDimension(0, 0, 350, 380)
         self.SetSizer(sz)
 
-def main():
-    app = wx.App()
-    control_panel = BaseWindow()
-    control_panel.Show()
 
-    current_elevators = ElevatorsPanel(window=control_panel)
-    current_elevators.Show()
+class BaseApp(wx.App):
+    def __init__(self, test_suite=None, *args, **kwargs):
+        self.test_suite = test_suite
+        self.ready = False
+        super().__init__()
+        if self.test_suite is not None:
+            self.test_suite.on_app_ready(self)
+        #     self.test_suite.start()
 
-    debug_panel = DebugPanel(window=control_panel)
-    debug_panel.Show()
+    def OnInit(self):
+        self.window = BaseWindow(app=self)
+        self.window.Show()
 
-    elevator_status_panel = ElevatorStatusPanel(window=control_panel)
-    elevator_status_panel.Show()
+        self.current_elevators = ElevatorsPanel(window=self.window)
+        self.current_elevators.Show()
 
-    stats_panel = StatsPanel(window=control_panel)
-    stats_panel.Show()
+        self.control_panel = ControlPanel(window=self.window)
+        self.control_panel.Show()
 
-    log_panel = LogPanel(window=control_panel)
-    log_panel.Show()
+        self.elevator_status_panel = ElevatorStatusPanel(window=self.window)
+        self.elevator_status_panel.Show()
 
+        self.stats_panel = StatsPanel(window=self.window)
+        self.stats_panel.Show()
+
+        self.log_panel = LogPanel(window=self.window)
+        self.log_panel.Show()
+
+        self.SetTopWindow(self.window)
+
+
+        print('app ready')
+        return True
+
+
+def start_gui(*args):
+    app = BaseApp(*args)
     app.MainLoop()
+    return app
 
 
-main()
+if __name__ == '__main__':
+    start_gui()
