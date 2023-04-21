@@ -1,14 +1,18 @@
-import copy
+import os
+import queue
 from datetime import datetime
 from enum import IntEnum
 import json
+import multiprocessing
 import random
 from dataclasses import dataclass, field
-from typing import Callable, List
+import time
+from typing import List, Tuple
+from multiprocessing import Queue, JoinableQueue
 
-from elevators import ElevatorManagerThread
+from elevators import ElevatorManagerOverhead
 from enums import LogLevel
-from models import CombinedStats, ElevatorManager, Load, SimulationStats
+from models import CombinedStats, Load, SimulationStats
 from utils import Constants, load_algorithms
 
 
@@ -16,10 +20,6 @@ class LogOrigin(IntEnum):
     SIMULATION = 1
     TEST = 2
 
-
-# Figure out threading.Event
-# Right now, each SIM is one thread
-# Have to properly integrate it
 
 @dataclass
 class TestStats:
@@ -50,222 +50,176 @@ class TestStats:
             }
         }
 
+@dataclass
+class TestSettings:
+    name: str
+    seed: int
+    speed: int
+    floors: int
+    num_elevators: int
+    num_passengers: int
+    algorithm_name: str
+    total_iterations: int
+    loads: List[Load] = field(default_factory=list)
 
-class ElevatorManagerThreadTestWrapper(ElevatorManagerThread):
-    def __init__(self, parent, manager: ElevatorManager, *args, **kwargs):
-        super().__init__(parent, manager, *args, event=None gui=False, **kwargs)
-        self.test: 'Test' = parent
-        self.simulation_running = False
-
-    def send_event(self):
-        return
-
-    def on_tick(self):
-        super().on_tick()
-        if self.simulation_running is True and self.manager.simulation_running is False:
-            self.test.on_raw_end_simulation()
-
-class Test:
-    suite: 'TestSuite'
-
-    def __init__(self, name, repeat, *args, **kwargs):
-        self.name = name
-        self.suite = None  # will be added by the suite
-        self.time_started = None
-
-        self.current_iteration = 0
-        self.total_iterations = repeat
-        self.manager_thread = None
-
-        self.seed = kwargs.pop('seed', random.randint(0, 2**32 - 1))
-        self.speed = kwargs.pop("speed", 100)
-        self.floors = kwargs.pop("floors", 10)
-        self.num_elevators = kwargs.pop("num_elevators", 1)
-        self.num_passengers = kwargs.pop("num_passengers", 0)
-        self.algorithm_name = kwargs.pop("algorithm_name", Constants.DEFAULT_ALGORITHM)
-
-        self.loads = kwargs.pop("loads", None)
-        self.stats = TestStats()
-
-        self.args = args
-        self.kwargs = kwargs
+    def __post_init__(self):
+        for _ in range(self.num_passengers):
+            initial, destination = random.sample(range(1, self.floors + 1), 2)
+            load = Load(initial, destination, 60)
+            load.tick_created = 0
+            self.loads.append(load)
 
     @property
     def algorithm(self):
         return self.suite.algorithms[self.algorithm_name]
 
-    def on_raw_end_simulation(self):
-        self.end_simulation()
-
-    def start_test(self):
-        random.seed(self.seed)
-        self.time_started = datetime.now()
-        self.start_simulation()
-        self.on_test_start()
-
-    def on_test_start(self):
-        print('Test started:', self)
-
-    def end_test(self):
-        self.on_test_end()
-        self.suite.on_test_end()
-
-    def on_test_end(self):
-        print('Test ended:', self)
-        print('-------------------')
-
-    def start_simulation(self):
-        thread = ElevatorManagerThreadTestWrapper(self, self.algorithm)
-        thread.pause()
-        thread.set_speed(self.speed)
-        thread.set_floors(self.floors)
-        thread.set_algorithm(self.algorithm_name)
-        for _ in range(self.num_elevators):
-            self.add_elevator(random.randint(1, self.floors))
-
-        passengers = []
-        for _ in range(self.num_passengers):
-            passengers.append(random.sample(range(1, self.manager_thread.manager.floors + 1), 2))
-
-        thread.add_passengers(passengers)
-        thread.add_random_passengers(self.num_passengers)
-        if self.loads is not None:
-            thread.manager.loads.extend(self.loads)
-
-        self.current_iteration += 1
-        thread.play()
-        self.on_simulation_start()
-
-    def on_simulation_start(self):
-        print('Simulation started:', self.current_iteration)
-
-    def end_simulation(self):
-        # play the next
-        self.pause()
-        simulation_stats: SimulationStats = self.suite.get_stats()
-        self.stats.append(simulation_stats)
-
-        if self.current_iteration < self.total_iterations:
-            self.start_simulation()
-        else:
-            self.end_test()
-
-        self.on_simulation_end()
-
-    def on_simulation_end(self):
-        print('Simulation ended:', self.current_iteration)
-
     def to_dict(self):
         return {
             'name': self.name,
-            'time_started': self.time_started.isoformat(),
             'seed': self.seed,
             'speed': self.speed,
             'floors': self.floors,
             'num_elevators': self.num_elevators,
             'num_passengers': self.num_passengers,
-            'current_iteration': self.current_iteration,
             'total_iterations': self.total_iterations,
-            'stats': self.stats.to_dict(),
         }
 
-    def __repr__(self) -> str:
-        return f'Test({self.name})'
-
-    def add_random_passengers(self, count: int):
-        if not self.running:
-            raise RuntimeError("Test suite not started")
-
-        passengers = []
-        for _ in range(count):
-            passengers.append(random.sample(range(1, self.manager_thread.manager.floors + 1), 2))
-
-        self.manager_thread.add_passengers(passengers)
-
-    # region
-    def pause(self):
-        if not self.running:
-            raise RuntimeError("Test suite not started")
-
-        if self.manager_thread.active:
-            self.manager_thread.set_active(False)
-        else:
-            print("Test not running")
-
-    def play(self):
-        if not self.running:
-            raise RuntimeError("Test suite not started")
-
-        if not self.manager_thread.active:
-            self.manager_thread.set_active(True)
-        else:
-            raise RuntimeError("Test already running")
-
-    # endregion
-class TestSuite:
-    def __init__(self, tests):
-        self.tests: List[Test] = tests
-
-        for test in self.tests:
-            test.suite = self
-
-        self.iter_tests = iter(self.tests)
-        self.current_test = None
-
-        self.manager_thread = None
-        self.manager = None
-
+class ElevatorManagerConsumer(ElevatorManagerOverhead):
+    def __init__(
+        self,
+        p_count,
+        in_queue, out_queue,
+        parent
+    ):
+        self.p_count = p_count
         self.algorithms = load_algorithms()
-        self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
+        super().__init__(self, None, self.algorithms['Knuth'], gui=False, log_func=self.WriteToLog)
+        self.process = multiprocessing.Process(target=self.go, args=(in_queue, out_queue), daemon=True)
+        self._running = False
 
     @property
     def running(self):
-        return self.manager_thread is not None and self.manager_thread.is_open
+        return self._running
 
-    def run_next_test(self):
-        try:
-            self.current_test = next(self.iter_tests)
-        except StopIteration:
-            self.current_test = None
-            self.close_suite()
+    def go(self, in_queue, out_queue):
+        while True:
+            n_iter, settings = in_queue.get()
+
+            random.seed((settings.seed + n_iter) % 2**32)
+            algo = self.algorithms[settings.algorithm_name]
+            algo.name = settings.algorithm_name
+            self.reset(algo)
+
+            self.set_speed(settings.speed)
+            self.set_floors(settings.floors)
+
+            for _ in range(settings.num_elevators):
+                self.add_elevator(random.randint(1, settings.floors))
+            self.manager.loads.extend(settings.loads)
+            self.WriteToLog(LogLevel.INFO, f'{self.p_count=} START SIMULATION: {n_iter=} {settings.name=}', LogOrigin.TEST)
+            self.active = True
+            self.start_simulation()
+
+            self.WriteToLog(LogLevel.INFO, f'{self.p_count=} END SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}', LogOrigin.TEST)
+            out_queue.put(((n_iter, settings), self.manager.stats))
+            in_queue.task_done()
+
+    def send_event(self):
+        return
+
+    def on_tick(self):
+        if self._running is True and self.manager.simulation_running is False:
+            self.end_simulation()
+
+        # timeout
+        if self.current_tick == 1000:
+            # self.end_simulation()
+            self.WriteToLog(LogLevel.INFO, f'{self.p_count=} TIMEOUT', LogOrigin.TEST)
+            print(self.manager.loads)
+            print(self.manager.pending_loads)
+            print(self.manager.elevators)
+            print(self.manager.attended_to)
+
+    def start_simulation(self):
+        self._running = True
+        self.loop()
+
+    def end_simulation(self):
+        self._running = False
+
+    def WriteToLog(self, level: LogLevel, message, origin=LogOrigin.SIMULATION):
+        if (level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO) or origin == LogOrigin.TEST) or self.current_tick == 1000:
+        # if self.count == 3 and level not in (LogLevel.TRACE, LogLevel.DEBUG):
+        #     if message == '193224 unloaded from elevator 7':
+        #         print('crisis')
+        #         print(self.manager.loads)
+        #         print(self.manager.pending_loads)
+        #         print(self.manager.elevators).
+            print(level.name, message)
+
+    def __getstate__(self):
+        obj = self.__dict__.copy()
+        del obj['process']
+        return obj
+
+class TestSuite:
+    def __init__(self, tests, max_processes=None):
+        self.tests: List[TestSettings] = tests
+        self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
+        self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats]] = Queue()
+
+        hard_max_processes = min(multiprocessing.cpu_count(), sum(x.total_iterations for x in self.tests))
+        if max_processes is None:
+            self.max_processes = hard_max_processes
         else:
-            self.current_test.start_test()
+            self.max_processes = min(max_processes, hard_max_processes)
+
+        for test in self.tests:
+            for i in range(test.total_iterations):
+                self.in_queue.put((i + 1, test))
+
+        self.results: dict[TestSettings, TestStats] = {}
+
+        self.processes = []
 
     def start(self):
         """Starts the Test Suite"""
-        self.manager_thread = ElevatorManagerThread(self, self.on_raw_update_manager, self.current_algorithm, gui=False)
-        self.manager = copy.deepcopy(self.manager_thread.manager)
-        self.pause()
-        self.run_next_test()
+        for count in range(self.max_processes):
+            self.processes.append(ElevatorManagerConsumer(count, self.in_queue, self.out_queue, self))
 
-    def on_raw_update_manager(self, **event):
-        manager = event.pop('manager')
-        old_manager = self.manager
-        self.manager = copy.deepcopy(manager)
-        if self.running:
-            self.on_update_manager(old_manager, manager)
+        for p in self.processes:
+            p.process.start()
 
-    def on_update_manager(self, before: ElevatorManager, after: ElevatorManager):
-        if self.current_test is not None:
-            self.current_test.on_update_manager(before, after)
+        try:
+            self.in_queue.join()
+        except KeyboardInterrupt:
+            return
 
-    def get_stats(self) -> SimulationStats:
-        return self.manager_thread.manager.stats
+        print('All tests finished, gathering results')
+        while True:
+            try:
+                (count, settings), stats = self.out_queue.get(block=False)
+            except queue.Empty:
+                break
+            else:
+                if settings.name not in self.results:
+                    self.results[settings.name] = (settings, TestStats())
 
-    def on_test_end(self):
-        self.run_next_test()
+                self.results[settings.name][1].append(stats)
+
+        self.close_suite()
 
     def save_results(self):
         dt = datetime.now().isoformat().replace(':', '-')
-        fn = f'results_{dt}.json'
+        if not os.path.isdir('results'):
+            os.mkdir('results')
+
+        fn = f'results/{dt}.json'
         with open(fn, 'w') as f:
-            json.dump([test.to_dict() for test in self.tests], f, indent=4)
+            json.dump([{**settings.to_dict(), 'stats': stats.to_dict()} for settings, stats in self.results.values()], f, indent=4)
+        print(f'Saved results to {fn}')
 
     def close_suite(self):
         self.save_results()
-        self.manager_thread.close()
-        # self.manager_thread.join()
-
-    def WriteToLog(self, level: LogLevel, message, origin=LogOrigin.SIMULATION):
-        if level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO):
-            print(level.name, message)
+        self.in_queue.close()
+        self.out_queue.close()

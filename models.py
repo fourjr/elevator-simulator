@@ -186,12 +186,14 @@ class Load:
     def __post_init__(self):
         self.current_floor = self.initial_floor
 
+    def __repr__(self) -> str:
+        return f'Load(id={self.id}, initial_floor={self.initial_floor}, destination_floor={self.destination_floor}, weight={self.weight} current_floor={self.current_floor} elevator={bool(self.elevator)})'
 
 class ElevatorManager:
     """A global class that houses the elevators"""
 
-    def __init__(self, thread, floors, *, elevators=None, loads=None) -> None:
-        self.thread = thread
+    def __init__(self, parent, floors, *, elevators=None, loads=None) -> None:
+        self.parent: 'TestSuite | wx.Window' = parent
         self.floors = floors
         self.elevators: List[Elevator] = elevators or []
         self.loads: List[Load] = loads or []
@@ -291,7 +293,7 @@ class ElevatorManager:
         new_id = 1
         if self.elevators:
             new_id = self.elevators[-1].id + 1
-        elevator = Elevator(self.thread, new_id, current_floor, attributes)
+        elevator = Elevator(self.parent, new_id, current_floor, attributes)
         self.elevators.append(elevator)
         return elevator
 
@@ -316,7 +318,7 @@ class ElevatorManager:
             The floor the passenger wants to go to
         """
         load = Load(initial, destination, 60)
-        load.tick_created = self.thread.current_tick
+        load.tick_created = self.parent.current_tick
         self.loads.append(load)
 
     def cycle(self):
@@ -339,20 +341,20 @@ class ElevatorManager:
                         ) > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
-                            self.thread.parent.WriteToLog(
+                            self.parent.WriteToLog(
                                 LogLevel.DEBUG,
                                 f"Load {load.id} failed preload for elevator {elevator.id}",
                             )
                             continue
 
-                        self.thread.parent.WriteToLog(
+                        self.parent.WriteToLog(
                             LogLevel.INFO,
                             f"Load {load.id} added to elevator {elevator.id}",
                         )
                         loads_to_add.append(load)
                         load.elevator = elevator
-                        load.enter_lift_tick = self.thread.current_tick
-                        wait_time = self.thread.current_tick - load.tick_created
+                        load.enter_lift_tick = self.parent.current_tick
+                        wait_time = self.tick_count - load.tick_created
                         self.wait_times.append(wait_time)
                         elevator.add_load(load)
 
@@ -361,35 +363,36 @@ class ElevatorManager:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["thread"]
+        del state["parent"]
         return state
 
 
 class Elevator:
-    def __init__(self, thread, elevator_id, current_floor=1, attributes=None) -> None:
+    def __init__(self, parent, elevator_id, current_floor=1, attributes=None) -> None:
         self.id = elevator_id
-        self.thread = thread
+        self.parent = parent
         self._current_floor = current_floor
         self.loads: List[Load] = []
         self.attributes: List[str] = attributes or []
         self.enabled: bool = True
 
-        self._destination: int = self.thread.manager.get_new_destination(self)
+        self._destination: int = self.parent.manager.get_new_destination(self)
 
     @property
     def destination(self):
-        if self._destination == self.current_floor:
-            self._destination = self.thread.manager.get_new_destination(self)
+        if self._destination == self.current_floor or self._destination is None:
+            self._destination = self.parent.manager.get_new_destination(self)
 
         return self._destination
 
     @property
     def direction(self):
-        if self.destination is None:
+        dest = self.destination
+        if dest is None:
             return None
-        if self.destination > self.current_floor:
+        if dest > self.current_floor:
             return Direction.UP
-        if self.destination < self.current_floor:
+        if dest < self.current_floor:
             return Direction.DOWN
 
     @property
@@ -413,7 +416,7 @@ class Elevator:
         if abs(increment) != 1:
             raise BadArgument("Elevator can only move by 1 floor at a time")
 
-        self.thread.parent.WriteToLog(
+        self.parent.WriteToLog(
             LogLevel.TRACE,
             f"Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}",
         )
@@ -426,22 +429,22 @@ class Elevator:
             # unloading off elevator
             if (
                 load.destination_floor == self.current_floor
-                and self.thread.manager.pre_unload_check(load, self)
+                and self.parent.manager.pre_unload_check(load, self)
             ):
-                self.thread.parent.WriteToLog(
+                self.parent.WriteToLog(
                     LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
                 )
-                self.thread.manager.time_in_lift.append(
-                    self.thread.current_tick - load.enter_lift_tick + 1
+                self.parent.manager.time_in_lift.append(
+                    self.parent.current_tick - load.enter_lift_tick + 1
                 )
                 load.elevator = None
                 to_remove.append(load)
 
         for load in to_remove:
             self.loads.remove(load)
-            self.thread.manager.loads.remove(load)
+            self.parent.manager.loads.remove(load)
 
-            self.thread.manager.on_load_removed(load, self)
+            self.parent.manager.on_load_removed(load, self)
 
     def cycle(self):
         """Runs a cycle of the elevator"""
@@ -458,7 +461,7 @@ class Elevator:
             self._move(increment)
 
         if self.destination is None:
-            self._destination = self.thread.manager.get_new_destination(self)
+            self._destination = self.parent.manager.get_new_destination(self)
 
     def add_load(self, load):
         """Adds new loads to the elevator.
@@ -468,16 +471,16 @@ class Elevator:
         """
         # Take a person as 60kg on average
         if (
-            self.thread.manager.max_load is not None
-            and self.load + load.weight > self.thread.manager.max_load
+            self.parent.manager.max_load is not None
+            and self.load + load.weight > self.parent.manager.max_load
         ):
             raise FullElevator(self.id)
 
         self.loads.append(load)
-        self.thread.manager.on_load_added(load, self)
+        self.parent.manager.on_load_added(load, self)
 
     def __repr__(self) -> str:
-        return f"<Elevator {self.id} load={self.load}>"
+        return f"<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Elevator):
@@ -486,5 +489,5 @@ class Elevator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["thread"]
+        del state["parent"]
         return state

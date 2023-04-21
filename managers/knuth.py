@@ -8,11 +8,11 @@ class ElevatorManagerKnuth(ElevatorManager):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.current_direction = {}
-        self.attended_to = set()
+        self.attended_to = {}
 
     @property
     def pending_loads(self) -> List[Load]:
-        return list(filter(lambda x: x.id not in self.attended_to, super().pending_loads))
+        return list(filter(lambda x: x.initial_floor not in self.attended_to.values(), super().pending_loads))
 
     def _calculate_direction(self, elevator, destination_floor):
         if elevator.current_floor > destination_floor:
@@ -21,7 +21,7 @@ class ElevatorManagerKnuth(ElevatorManager):
             self.current_direction[elevator.id] = Direction.UP
 
     def get_new_destination(self, elevator: Elevator):
-        """Gets a new destination for an elevator using the random strategy
+        """Gets a new destination for an elevator using the knuth strategy
 
         elevator: Elevator
             The elevator to get a new destination for
@@ -33,14 +33,16 @@ class ElevatorManagerKnuth(ElevatorManager):
                 key=lambda x: abs(x.destination_floor - elevator.current_floor),
             )[0].destination_floor
         else:
-            if len(self.pending_loads) == 0:
+            available_loads = self.pending_loads
+            if len(available_loads) == 0:
                 # no pending loads
                 self.current_direction[elevator.id] = None
                 return None
 
-            go_to = sorted(self.pending_loads, key=lambda x: x.tick_created)[0]
-            self.attended_to.add(go_to.id)
+            go_to = sorted(available_loads, key=lambda x: x.tick_created)[0]
+            self.attended_to[elevator.id] = go_to.initial_floor
             destination_floor = go_to.initial_floor
+            self.current_direction[elevator.id] = None
 
         if self.current_direction.get(elevator.id) is None:
             self._calculate_direction(elevator, destination_floor)
@@ -66,8 +68,6 @@ class ElevatorManagerKnuth(ElevatorManager):
         if elevator.load == 0:
             # No more loads
             self.current_direction[elevator.id] = None
-        if load.id in self.attended_to:
-            self.attended_to.remove(load.id)
 
         return super().on_load_removed(load, elevator)
 
@@ -75,8 +75,16 @@ class ElevatorManagerKnuth(ElevatorManager):
         if len(elevator.loads) == 1:
             # First load, reset destination
             elevator._destination = self.get_new_destination(elevator)
+
         return super().on_load_added(load, elevator)
 
+    def post_tick(self):
+        for elevator in self.elevators:
+            if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
+                # print('removing', load.id)
+                del self.attended_to[elevator.id]
+
+        return super().post_tick()
 
 __name__ = "Knuth"
 __manager__ = ElevatorManagerKnuth

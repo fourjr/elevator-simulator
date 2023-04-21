@@ -5,9 +5,8 @@ import wx
 
 from models import ElevatorManager
 
-
-class ElevatorManagerThread(threading.Thread):
-    def __init__(self, parent, event: Callable, manager: ElevatorManager, *, gui: bool=True):
+class ElevatorManagerOverhead:
+    def __init__(self, parent, event: Callable, manager: ElevatorManager, *, gui: bool=True, log_func: Callable=None):
         super().__init__()
         self.parent = parent
         self.event = event
@@ -17,13 +16,21 @@ class ElevatorManagerThread(threading.Thread):
         self.is_open = True
         self.current_tick = 0
         self.gui = gui
-        self.start()
+
+        if self.gui is True:
+            self.WriteToLog = self.parent.WriteToLog
+        else:
+            self.WriteToLog = log_func
+
+    @property
+    def running(self):
+        raise NotImplementedError
 
     def on_tick(self):
         pass
 
-    def run(self):
-        while self.is_alive() and self.is_open:
+    def loop(self):
+        while self.running and self.is_open:
             if self.active:
                 self.manager.cycle()
                 self.current_tick += 1
@@ -99,3 +106,17 @@ class ElevatorManagerThread(threading.Thread):
 
     def play(self):
         self.set_active(True)
+
+
+class ElevatorManagerThread(ElevatorManagerOverhead, threading.Thread):
+    def __init__(self, parent, event: Callable, manager: ElevatorManager, *, gui: bool=True):
+        ElevatorManagerOverhead.__init__(self, parent, event, manager, gui=gui)
+        threading.Thread.__init__(self)
+        self.start()
+
+    def run(self):
+        self.loop()
+
+    @property
+    def running(self):
+        return self.is_alive()

@@ -1,48 +1,58 @@
-from suite import Test, TestSuite
+from suite import TestSettings, TestSuite
 
 
 if __name__ == "__main__":
     tests = [
-        Test(
+        # TestSettings(
+        #     name="Quick Test",
+        #     algorithm_name="Knuth",
+        #     total_iterations=4,
+        #     seed=1234,
+        #     speed=10,
+        #     floors=10,
+        #     num_elevators=2,
+        #     num_passengers=10,
+        # ),
+        TestSettings(
             name='Knuth Benchmark',
             algorithm_name='Knuth',
-            repeat=10,
+            total_iterations=10,
             seed=1234,
-            speed=100,
+            speed=500,
             floors=50,
             num_elevators=8,
             num_passengers=1000,
         ),
-        Test(
+        TestSettings(
             name='KnuthDash Benchmark',
             algorithm_name='Knuth Dash',
-            repeat=10,
-            seed=1234,
-            speed=100,
+            total_iterations=5,
+            seed=1235,
+            speed=500,
             floors=50,
             num_elevators=8,
             num_passengers=1000,
         ),
-        Test(
+        TestSettings(
             name='Rolling Benchmark',
             algorithm_name='Rolling',
-            repeat=10,
+            total_iterations=10,
             seed=1234,
-            speed=100,
+            speed=500,
             floors=50,
             num_elevators=8,
             num_passengers=1000,
         ),
-        Test(
+        TestSettings(
             name='Scatter Benchmark',
             algorithm_name='Scatter',
-            repeat=10,
+            total_iterations=10,
             seed=1234,
-            speed=100,
+            speed=500,
             floors=50,
             num_elevators=8,
             num_passengers=1000,
-        )
+        ),
     ]
     suite = TestSuite(tests)
     suite.start()

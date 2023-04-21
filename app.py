@@ -435,7 +435,7 @@ class ControlPanel(wx.Panel):
         play_btn = wx.Button(panel, ID.BUTTON_CONTROL_PLAY, 'Play')
         play_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._toggle_play()
+            lambda _: self.toggle_play()
         )
         ctrl_sz.Add(play_btn, 1, wx.FIXED_MINSIZE)
 

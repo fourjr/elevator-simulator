@@ -16,8 +16,9 @@ class Unicode:
 
 class Constants:
     DEFAULT_ALGORITHM = "Knuth"
+    MAX_PROCESSES = 3
 
-def load_algorithms():
+def load_algorithms() -> dict[str, ElevatorManager]:
     algorithms = {}
     for i in glob.iglob('managers/*.py'):
         module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
