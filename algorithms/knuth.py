@@ -1,8 +1,8 @@
-from models import Direction, ElevatorManager, Elevator, Load
+from models import Direction, ElevatorAlgorithm, Elevator, Load
 from typing import List
 
 
-class ElevatorManagerKnuth(ElevatorManager):
+class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
     """The standard elevator algorithm"""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -87,4 +87,4 @@ class ElevatorManagerKnuth(ElevatorManager):
         return super().post_tick()
 
 __name__ = "Knuth"
-__manager__ = ElevatorManagerKnuth
+__algorithm__ = ElevatorAlgorithmKnuth

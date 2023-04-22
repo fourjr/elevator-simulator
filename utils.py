@@ -4,8 +4,8 @@ import os
 import statistics
 from typing import List
 
-from errors import InvalidManager
-from models import ElevatorManager
+from errors import InvalidAlgorithm
+from models import ElevatorAlgorithm
 
 
 class Unicode:
@@ -18,20 +18,20 @@ class Constants:
     DEFAULT_ALGORITHM = "Knuth"
     MAX_PROCESSES = 3
 
-def load_algorithms() -> dict[str, ElevatorManager]:
+def load_algorithms() -> dict[str, ElevatorAlgorithm]:
     algorithms = {}
-    for i in glob.iglob('managers/*.py'):
+    for i in glob.iglob('algorithms/*.py'):
         module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
-        if not hasattr(module, '__manager__'):
-            raise InvalidManager(f'Manager in {module} is not defined')
+        if not hasattr(module, '__algorithm__'):
+            raise InvalidAlgorithm(f'Algorithm in {module} is not defined')
         if not hasattr(module, '__name__'):
-            raise InvalidManager(f'Name in {module} is not defined')
+            raise InvalidAlgorithm(f'Name in {module} is not defined')
 
-        manager = module.__manager__
-        if not issubclass(manager, ElevatorManager):
-            raise InvalidManager(f'Manager in {module} is not a subclass of ElevatorManager')
+        algorithm = module.__algorithm__
+        if not issubclass(algorithm, ElevatorAlgorithm):
+            raise InvalidAlgorithm(f'Algorithm in {module} is not a subclass of ElevatorAlgorithm')
 
-        manager.name = module.__name__
-        algorithms[manager.name] = manager
+        algorithm.name = module.__name__
+        algorithms[algorithm.name] = algorithm
 
     return algorithms

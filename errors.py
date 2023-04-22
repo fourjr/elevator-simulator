@@ -7,6 +7,7 @@ class FullElevator(ElevatorError):
 
     def __init__(self, elevator_id) -> None:
         super().__init__(f"{elevator_id} is full, unable to add new load")
+        self.elevator_id = elevator_id
 
 
 class BadArgument(ElevatorError):
@@ -19,6 +20,15 @@ class ElevatorRunError(ElevatorError):
     pass
 
 
-class InvalidManager(ElevatorError):
-    """Raised when the manager is not of a valid type"""
+class InvalidAlgorithm(ElevatorError):
+    """Raised when the algorithm is not of a valid type"""
     pass
+
+
+class TestTimeout(ElevatorError):
+    """Raised when a test times out"""
+    def __init__(self, process_name, n_iter, settings) -> None:
+        super().__init__(process_name, n_iter, settings)
+        self.process_name = process_name
+        self.n_iter = n_iter
+        self.settings = settings

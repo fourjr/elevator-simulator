@@ -28,3 +28,8 @@ class LogLevel(IntEnum):
     INFO = 3
     WARNING = 4
     ERROR = 5
+
+
+class LogOrigin(IntEnum):
+    SIMULATION = 1
+    TEST = 2

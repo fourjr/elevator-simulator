@@ -1,8 +1,8 @@
-from managers.knuth import ElevatorManagerKnuth
+from algorithms.knuth import ElevatorAlgorithmKnuth
 from models import Elevator
 
 
-class ElevatorManagerKnuthDash(ElevatorManagerKnuth):
+class ElevatorAlgorithmKnuthDash(ElevatorAlgorithmKnuth):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.dash_to_floor = {}
@@ -39,4 +39,4 @@ class ElevatorManagerKnuthDash(ElevatorManagerKnuth):
         return super().post_tick()
 
 __name__ = "Knuth Dash"
-__manager__ = ElevatorManagerKnuthDash
+__algorithm__ = ElevatorAlgorithmKnuthDash

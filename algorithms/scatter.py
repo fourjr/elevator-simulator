@@ -1,8 +1,8 @@
 import random
-from models import Elevator, ElevatorManager
+from models import Elevator, ElevatorAlgorithm
 
 
-class ElevatorManagerScatter(ElevatorManager):
+class ElevatorAlgorithmScatter(ElevatorAlgorithm):
     def get_new_destination(self, elevator: Elevator):
         """Gets a new destination for an elevator using the random strategy
 
@@ -22,4 +22,4 @@ class ElevatorManagerScatter(ElevatorManager):
 
 
 __name__ = "Scatter"
-__manager__ = ElevatorManagerScatter
+__algorithm__ = ElevatorAlgorithmScatter

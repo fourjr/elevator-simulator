@@ -1,8 +1,8 @@
 import random
-from models import Direction, ElevatorManager, Elevator, Load
+from models import Direction, ElevatorAlgorithm, Elevator, Load
 
 
-class ElevatorManagerRolling(ElevatorManager):
+class ElevatorAlgorithmRolling(ElevatorAlgorithm):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.prev_direction = {}
@@ -27,4 +27,4 @@ class ElevatorManagerRolling(ElevatorManager):
 
 
 __name__ = "Rolling"
-__manager__ = ElevatorManagerRolling
+__algorithm__ = ElevatorAlgorithmRolling
