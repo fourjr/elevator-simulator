@@ -341,7 +341,7 @@ class ElevatorAlgorithm:
                 for load in self.loads:
                     # add to elevator
                     if load.elevator is None and load.initial_floor == elevator.current_floor:
-                        if elevator.load + load.weight + sum(x.weight for x in loads_to_add > self.max_load:
+                        if elevator.load + load.weight + sum(x.weight for x in loads_to_add) > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
                             self.manager.WriteToLog(

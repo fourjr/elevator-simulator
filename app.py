@@ -16,7 +16,7 @@ import wx.aui as aui
 from enums import ID
 from errors import BadArgument
 from models import LogLevel, LogMessage, ElevatorManagerThread
-from utils import Constants, Unicode, load_algorithms
+from utils import Constants, Unicode, load_algorithms, save_algorithm
 
 
 (UpdateAlgorithm, EVT_UPDATE_MANAGER) = wxne.NewEvent()
@@ -40,26 +40,39 @@ class BaseWindow(wx.Frame):
         self.algorithms = load_algorithms()
         self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
 
-        self.algorithm_thread = ElevatorManagerThread(
+        self.manager = ElevatorManagerThread(
             self, UpdateAlgorithm, self.current_algorithm
         )
-        self.algorithm = copy.deepcopy(self.algorithm_thread.algorithm)
+        self.algorithm = copy.deepcopy(self.manager.algorithm)
 
         self.Bind(EVT_UPDATE_MANAGER, self.OnUpdateAlgorithm)
         self.Bind(wx.EVT_CLOSE, self.Close)
         self.SetBackgroundColour("white")
         self.InitMenuBar()
 
+    def _update_gui(self, algo):
+        for c in list(self.GetChildren()):
+            if hasattr(c, "OnUpdateAlgorithm"):
+                c.OnUpdateAlgorithm(self.algorithm, algo)
+
+        self.algorithm = copy.deepcopy(algo)
+
     def _import_simulation(self, fn):
-        # TODO
         dt = datetime.now().isoformat()
         skip_bytes = len(
-            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode("utf8")
+            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00"
         )
         with open(fn, "rb") as f:
-            self.algorithm_thread.algorithm = pickle.loads(
-                gzip.decompress(f.read(skip_bytes)[:-skip_bytes])
+            self.manager.algorithm = pickle.loads(
+                gzip.decompress(f.read()[skip_bytes:-skip_bytes])
             )
+
+        self.manager.algorithm.manager = self.manager
+
+        for ev in self.manager.algorithm.elevators:
+            ev.manager = self.manager
+
+        self._update_gui(self.manager.algorithm)
 
     def InitMenuBar(self):
         menubar = wx.MenuBar()
@@ -73,33 +86,29 @@ class BaseWindow(wx.Frame):
         self.SetFont(self.font)
 
     def OnUpdateAlgorithm(self, e: wx.Event):
-        for c in list(self.GetChildren()):
-            if hasattr(c, "OnUpdateAlgorithm"):
-                c.OnUpdateAlgorithm(self.algorithm, e.algorithm)
-
-        self.algorithm = copy.deepcopy(e.algorithm)
+        self._update_gui(e.algorithm)
 
     def Close(self, *_):
-        self.algorithm_thread.close()
-        self.algorithm_thread.join()
+        self.manager.close()
+        self.manager.join()
         self.Destroy()
 
     def WriteToLog(self, level: LogLevel, message):
         self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(
-            LogMessage(level, message, self.algorithm_thread.current_tick)
+            LogMessage(level, message, self.manager.current_tick)
         )
 
     @property
     def active(self):
-        return self.algorithm_thread.active
+        return self.manager.active
 
     @active.setter
     def active(self, value):
-        self.algorithm_thread.set_active(value)
+        self.manager.set_active(value)
 
     @property
     def floors(self):
-        return self.algorithm_thread.algorithm.floors
+        return self.manager.algorithm.floors
 
 
 class ElevatorsPanel(scrolled.ScrolledPanel):
@@ -264,7 +273,7 @@ class ControlPanel(wx.Panel):
         self.SetSizer(sz)
 
     def add_elevator(self, floor):
-        self.window.algorithm_thread.add_elevator(floor)
+        self.window.manager.add_elevator(floor)
         self.window.WriteToLog(LogLevel.INFO, f"Added elevator on floor {floor}")
 
     def remove_elevator(self, elevator_id):
@@ -275,7 +284,7 @@ class ControlPanel(wx.Panel):
             return
 
         try:
-            self.window.algorithm_thread.remove_elevator(elevator_id)
+            self.window.manager.remove_elevator(elevator_id)
         except BadArgument as e:
             self.window.WriteToLog(LogLevel.ERROR, str(e))
             return
@@ -292,7 +301,7 @@ class ControlPanel(wx.Panel):
         self.window.WriteToLog(
             LogLevel.INFO, f"Add passenger on floor {floor_i} to {floor_f}"
         )
-        return self.window.algorithm_thread.add_passenger(floor_i, floor_f)
+        return self.window.manager.add_passenger(floor_i, floor_f)
 
     def _add_random_passengers(self, count):
         for _ in range(count):
@@ -306,18 +315,18 @@ class ControlPanel(wx.Panel):
             )
             return
 
-        self.window.algorithm_thread.set_algorithm(
+        self.window.manager.set_algorithm(
             self.window.algorithms[algorithm_name]
         )
         self.window.current_algorithm = self.window.algorithms[algorithm_name]
         self.window.WriteToLog(LogLevel.INFO, f"Set algorithm to {algorithm_name}")
 
     def set_speed(self, speed):
-        self.window.algorithm_thread.set_speed(speed)
+        self.window.manager.set_speed(speed)
         self.window.WriteToLog(LogLevel.INFO, f"Speed set to {speed}")
 
     def set_floors(self, floor_count):
-        self.window.algorithm_thread.set_floors(floor_count)
+        self.window.manager.set_floors(floor_count)
         self.window.WriteToLog(LogLevel.INFO, f"Setting floors to: {floor_count}")
 
     def toggle_play(self):
@@ -329,27 +338,39 @@ class ControlPanel(wx.Panel):
             "Play" if not self.window.active else "Pause"
         )
 
-    def export_simulation(self):
-        dt = datetime.now().isoformat().replace(":", "-")
-        fn = f"{dt}_{self.window.current_algorithm.name}.esi"
-        if not os.path.isdir("exports"):
-            os.mkdir("exports")
+    def import_simulation_fs(self):
+        default_dir = os.getcwd()
+        if os.path.isdir(os.path.join(default_dir, "exports")):
+            default_dir = os.path.join(default_dir, "exports")
 
-        with open(f"exports/{fn}", "wb") as f:
-            f.write(
-                f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode(
-                    "utf8"
-                )
-                + gzip.compress(pickle.dumps(self.window.algorithm_thread.algorithm))
-                + f"\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode(
-                    "utf8"
-                )
+        dlg = wx.FileDialog(
+            self, message="Choose a file",
+            defaultDir=default_dir,
+            defaultFile="",
+            wildcard="*.esi",
+            style=wx.FD_OPEN |
+                  wx.FD_CHANGE_DIR | wx.FD_FILE_MUST_EXIST |
+                  wx.FD_PREVIEW
             )
+        if dlg.ShowModal() == wx.ID_OK:
+            # This returns a Python list of files that were selected.
+            paths = dlg.GetPaths()
+            fp = paths[0]
 
+            self.reset_simulation()
+            self.window._import_simulation(fp)
+
+            self.window.WriteToLog(LogLevel.INFO, f"Imported {fp}")
+
+        dlg.Destroy()
+
+
+    def export_simulation(self):
+        fn = save_algorithm(self.window.manager.algorithm)
         self.window.WriteToLog(LogLevel.INFO, f"Exported as {fn}")
 
     def reset_simulation(self):
-        self.window.algorithm_thread.reset(self.window.current_algorithm)
+        self.window.manager.reset(self.window.current_algorithm)
         self.window.WriteToLog(LogLevel.INFO, f"Reset")
 
     def LoadControlPanel(self):
@@ -378,7 +399,7 @@ class ControlPanel(wx.Panel):
         ef_remove_selection = wx.ComboBox(
             panel,
             id=ID.SELECT_ELEVATOR_REMOVE,
-            choices=[x.id for x in self.window.algorithm_thread.algorithm.elevators],
+            choices=[x.id for x in self.window.manager.algorithm.elevators],
         )
         elevator_sz.Add(ef_remove_selection, 1, wx.FIXED_MINSIZE)
 
@@ -495,6 +516,11 @@ class ControlPanel(wx.Panel):
         play_btn = wx.Button(panel, ID.BUTTON_CONTROL_PLAY, "Play")
         play_btn.Bind(wx.EVT_BUTTON, lambda _: self.toggle_play())
         ctrl_sz.Add(play_btn, 1, wx.FIXED_MINSIZE)
+        ctrl_sz.AddSpacer(10)
+
+        import_btn = wx.Button(panel, wx.ID_ANY, "Import")
+        import_btn.Bind(wx.EVT_BUTTON, lambda _: self.import_simulation_fs())
+        ctrl_sz.Add(import_btn, 1, wx.FIXED_MINSIZE)
 
         save_btn = wx.Button(panel, wx.ID_ANY, "Export")
         save_btn.Bind(wx.EVT_BUTTON, lambda _: self.export_simulation())
@@ -524,7 +550,7 @@ class ControlPanel(wx.Panel):
         load_sz.Add(load_selection, 1, wx.FIXED_MINSIZE)
 
         def set_load_callback(_):
-            self.window.algorithm_thread.set_max_load(load_selection.GetValue() * 60)
+            self.window.manager.set_max_load(load_selection.GetValue() * 60)
             self.window.WriteToLog(
                 LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}"
             )
@@ -657,7 +683,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         self.sz.Add(down_text, 0, wx.FIXED_MINSIZE)
 
         # floors
-        for i in range(self.window.algorithm_thread.algorithm.floors):
+        for i in range(self.window.manager.algorithm.floors):
             self._add_floor(i)
 
         self.SetSizer(self.sz)
@@ -744,7 +770,7 @@ class StatsPanel(scrolled.ScrolledPanel):
             "",
             style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP,
         )
-        self.update_stats(self.window.algorithm_thread.algorithm)
+        self.update_stats(self.window.manager.algorithm)
         sz.Add(self.stats_tc, 1, wx.EXPAND)
 
         sz.SetDimension(0, 0, 350, 250)
