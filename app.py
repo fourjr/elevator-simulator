@@ -66,9 +66,6 @@ class BaseWindow(wx.Frame):
             if hasattr(c, 'OnUpdateAlgorithm'):
                 c.OnUpdateAlgorithm(self.algorithm, e.algorithm)
 
-        if self.app.test_suite is not None:
-            self.app.test_suite.on_update_algorithm(self.algorithm, e.algorithm)
-
         self.algorithm = copy.deepcopy(e.algorithm)
 
     def Close(self, *_):
@@ -744,13 +741,9 @@ class LogPanel(wx.Panel):
 
 
 class BaseApp(wx.App):
-    def __init__(self, test_suite=None, *args, **kwargs):
-        self.test_suite = test_suite
+    def __init__(self):
         self.ready = False
         super().__init__()
-        if self.test_suite is not None:
-            self.test_suite.on_app_ready(self)
-        #     self.test_suite.start()
 
     def OnInit(self):
         self.window = BaseWindow(app=self)
@@ -773,8 +766,6 @@ class BaseApp(wx.App):
 
         self.SetTopWindow(self.window)
 
-
-        print('app ready')
         return True
 
 

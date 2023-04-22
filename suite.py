@@ -58,6 +58,7 @@ class TestSettings:
     num_passengers: int
     algorithm_name: str
     total_iterations: int
+    max_load: int
     loads: List[Load] = field(default_factory=list)
 
     def __post_init__(self):
@@ -117,6 +118,7 @@ class TestSuiteConsumer(ElevatorManager):
 
                 self.set_speed(settings.speed)
                 self.set_floors(settings.floors)
+                self.set_max_load(settings.max_load)
 
                 for _ in range(settings.num_elevators):
                     self.add_elevator(random.randint(1, settings.floors))
@@ -139,6 +141,9 @@ class TestSuiteConsumer(ElevatorManager):
         except KeyboardInterrupt:
             return
         except Exception as e:
+            # need to format first as pickle will remove the traceback
+            e.formatted_exception = traceback.format_exc().strip()
+
             if self.current_simulation is not None:
                 n_iter, settings = self.current_simulation
                 self.log_message(LogLevel.ERROR, f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}', LogOrigin.TEST)
@@ -195,8 +200,7 @@ class ErrorProcess(mp.Process):
             consumers[consumer.name] = consumer
 
             print(f'[E_HANDLER] INFO {name} died, restarting as {consumer.name}')
-            traceback.print_exception(type(e), e, e.__traceback__)
-
+            print(e.formatted_exception)
             error_queue.task_done()
 
 

@@ -81,7 +81,6 @@ class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
     def post_tick(self):
         for elevator in self.elevators:
             if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
-                # print('removing', load.id)
                 del self.attended_to[elevator.id]
 
         return super().post_tick()
