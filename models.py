@@ -42,15 +42,18 @@ class GeneratedStats:
         return max(self.values)
 
     def __str__(self):
-        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
+        return (
+            f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
+        )
 
     def to_dict(self):
         return {
-            'mean': self.mean,
-            'median': self.median,
-            'minimum': self.minimum,
-            'maximum': self.maximum,
+            "mean": self.mean,
+            "median": self.median,
+            "minimum": self.minimum,
+            "maximum": self.maximum,
         }
+
 
 @dataclass
 class CombinedStats:
@@ -102,9 +105,11 @@ class CombinedStats:
         return statistics.mean([stat.maximum for stat in self.stats])
 
     def __str__(self):
-        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
+        return (
+            f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
+        )
 
-    def __or__(self, other: 'GeneratedStats') -> 'CombinedStats':
+    def __or__(self, other: "GeneratedStats") -> "CombinedStats":
         """Combines another GeneratedStats object using the | operator"""
         if not isinstance(other, GeneratedStats):
             return super().__or__(other)
@@ -113,11 +118,12 @@ class CombinedStats:
 
     def to_dict(self):
         return {
-            'mean': self.mean,
-            'median': self.median,
-            'minimum': self.minimum,
-            'maximum': self.maximum,
+            "mean": self.mean,
+            "median": self.median,
+            "minimum": self.minimum,
+            "maximum": self.maximum,
         }
+
 
 @dataclass
 class SimulationStats:
@@ -128,10 +134,10 @@ class SimulationStats:
     occupancy: GeneratedStats
 
     def __str__(self) -> str:
-        fmt_text = f'Tick: {self.ticks}\nAlgorithm: {self.algorithm_name}\n\n(MIN/MEAN/MED/MAX)\n\n'
-        fmt_text += f'Wait Time: {self.wait_time}\n'
-        fmt_text += f'Time in Lift: {self.time_in_lift}\n'
-        fmt_text += f'Occupancy: {self.occupancy}'
+        fmt_text = f"Tick: {self.ticks}\nAlgorithm: {self.algorithm_name}\n\n(MIN/MEAN/MED/MAX)\n\n"
+        fmt_text += f"Wait Time: {self.wait_time}\n"
+        fmt_text += f"Time in Lift: {self.time_in_lift}\n"
+        fmt_text += f"Occupancy: {self.occupancy}"
         return fmt_text
 
 
@@ -169,6 +175,7 @@ class Load:
         tick_created: int
         enter_lift_tick: int
     """
+
     _id_iter = itertools.count()
 
     id: int = field(init=False, default_factory=lambda: next(Load._id_iter))
@@ -184,7 +191,7 @@ class Load:
         self.current_floor = self.initial_floor
 
     def __repr__(self) -> str:
-        return f'Load(id={self.id}, initial_floor={self.initial_floor}, destination_floor={self.destination_floor}, weight={self.weight} current_floor={self.current_floor} elevator={bool(self.elevator)})'
+        return f"Load(id={self.id}, initial_floor={self.initial_floor}, destination_floor={self.destination_floor}, weight={self.weight} current_floor={self.current_floor} elevator={bool(self.elevator)})"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Load):
@@ -333,15 +340,8 @@ class ElevatorAlgorithm:
                 loads_to_add = []
                 for load in self.loads:
                     # add to elevator
-                    if (
-                        load.elevator is None
-                        and load.initial_floor == elevator.current_floor
-                    ):
-                        if (
-                            elevator.load
-                            + load.weight
-                            + sum(x.weight for x in loads_to_add)
-                        ) > self.max_load:
+                    if load.elevator is None and load.initial_floor == elevator.current_floor:
+                        if elevator.load + load.weight + sum(x.weight for x in loads_to_add > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
                             self.manager.WriteToLog(
@@ -431,10 +431,7 @@ class Elevator:
             self.manager.on_load_move(load)
 
             # unloading off elevator
-            if (
-                load.destination_floor == self.current_floor
-                and self.manager.algorithm.pre_unload_check(load, self)
-            ):
+            if  load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(load, self):
                 self.manager.WriteToLog(
                     LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
                 )
@@ -446,11 +443,7 @@ class Elevator:
 
         for load in to_remove:
             self.loads.remove(load)
-            try:
-                self.manager.algorithm.loads.remove(load)
-            except ValueError:
-                print(load, self.manager.algorithm.loads)
-                raise
+            self.manager.algorithm.loads.remove(load)
 
             self.manager.algorithm.on_load_removed(load, self)
 
@@ -478,10 +471,7 @@ class Elevator:
             A list of loads to add to the elevator
         """
         # Take a person as 60kg on average
-        if (
-            self.manager.algorithm.max_load is not None
-            and self.load + load.weight > self.manager.algorithm.max_load
-        ):
+        if  self.manager.algorithm.max_load is not None and self.load + load.weight > self.manager.algorithm.max_load:
             raise FullElevator(self.id)
 
         self.loads.append(load)
@@ -502,7 +492,15 @@ class Elevator:
 
 
 class ElevatorManager:
-    def __init__(self, parent, event: Callable, algorithm: ElevatorAlgorithm, *, gui: bool=True, log_func: Callable=None):
+    def __init__(
+        self,
+        parent,
+        event: Callable,
+        algorithm: ElevatorAlgorithm,
+        *,
+        gui: bool = True,
+        log_func: Callable = None,
+    ):
         super().__init__()
         self.parent = parent
         self.event = event
@@ -606,8 +604,11 @@ class ElevatorManager:
     def on_load_move(self, load: Load):
         pass
 
+
 class ElevatorManagerThread(ElevatorManager, threading.Thread):
-    def __init__(self, parent, event: Callable, algorithm: ElevatorAlgorithm, *, gui: bool=True):
+    def __init__(
+        self, parent, event: Callable, algorithm: ElevatorAlgorithm, *, gui: bool = True
+    ):
         ElevatorManager.__init__(self, parent, event, algorithm, gui=gui)
         threading.Thread.__init__(self)
         self.start()

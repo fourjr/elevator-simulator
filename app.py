@@ -24,9 +24,14 @@ from utils import Constants, Unicode, load_algorithms
 
 class BaseWindow(wx.Frame):
     def __init__(self, app):
-        super().__init__(None, title='flying things that move vertically', pos=wx.Point(0, 0), size=wx.Size(1080, 720))
+        super().__init__(
+            None,
+            title="flying things that move vertically",
+            pos=wx.Point(0, 0),
+            size=wx.Size(1080, 720),
+        )
         self.app = app
-        self.font = wx.Font(13, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'Segoue UI')
+        self.font = wx.Font(13, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, "Segoue UI")
         self.log_tc = None
         self.speed = 1
         self.algo = None
@@ -35,35 +40,41 @@ class BaseWindow(wx.Frame):
         self.algorithms = load_algorithms()
         self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
 
-        self.algorithm_thread = ElevatorManagerThread(self, UpdateAlgorithm, self.current_algorithm)
+        self.algorithm_thread = ElevatorManagerThread(
+            self, UpdateAlgorithm, self.current_algorithm
+        )
         self.algorithm = copy.deepcopy(self.algorithm_thread.algorithm)
 
         self.Bind(EVT_UPDATE_MANAGER, self.OnUpdateAlgorithm)
         self.Bind(wx.EVT_CLOSE, self.Close)
-        self.SetBackgroundColour('white')
+        self.SetBackgroundColour("white")
         self.InitMenuBar()
 
     def _import_simulation(self, fn):
         # TODO
         dt = datetime.now().isoformat()
-        skip_bytes = len(f'fourjr/elevator-simulator {dt} fourjr/elevator-simulator'.encode('utf8'))
-        with open(fn, 'rb') as f:
-            self.algorithm_thread.algorithm = pickle.loads(gzip.decompress(f.read(skip_bytes)[:-skip_bytes]))
+        skip_bytes = len(
+            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode("utf8")
+        )
+        with open(fn, "rb") as f:
+            self.algorithm_thread.algorithm = pickle.loads(
+                gzip.decompress(f.read(skip_bytes)[:-skip_bytes])
+            )
 
     def InitMenuBar(self):
         menubar = wx.MenuBar()
         fileMenu = wx.Menu()
-        fileMenu.Append(wx.MenuItem(fileMenu, ID.MENU_APP_EXIT, '&Quit\tCtrl+Q'))
+        fileMenu.Append(wx.MenuItem(fileMenu, ID.MENU_APP_EXIT, "&Quit\tCtrl+Q"))
 
         self.Bind(wx.EVT_MENU, self.Close, id=ID.MENU_APP_EXIT)
-        menubar.Append(fileMenu, '&File')
+        menubar.Append(fileMenu, "&File")
 
         self.SetMenuBar(menubar)
         self.SetFont(self.font)
 
     def OnUpdateAlgorithm(self, e: wx.Event):
         for c in list(self.GetChildren()):
-            if hasattr(c, 'OnUpdateAlgorithm'):
+            if hasattr(c, "OnUpdateAlgorithm"):
                 c.OnUpdateAlgorithm(self.algorithm, e.algorithm)
 
         self.algorithm = copy.deepcopy(e.algorithm)
@@ -74,7 +85,9 @@ class BaseWindow(wx.Frame):
         self.Destroy()
 
     def WriteToLog(self, level: LogLevel, message):
-        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(LogMessage(level, message, self.algorithm_thread.current_tick))
+        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(
+            LogMessage(level, message, self.algorithm_thread.current_tick)
+        )
 
     @property
     def active(self):
@@ -92,21 +105,25 @@ class BaseWindow(wx.Frame):
 class ElevatorsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
         self.window = window
-        super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(
+            id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME
+        )
         self.texts = {}  # id : (floor_text, pax_text)
         self.InitUI()
         self.SetupScrolling(scroll_y=False)
 
     def _add_elevator(self, ev):
-        elevator_box = wx.StaticBox(self, label=f"Elevator {ev.id}", pos=wx.Point(0, 0), size=wx.Size(130, 100))
+        elevator_box = wx.StaticBox(
+            self, label=f"Elevator {ev.id}", pos=wx.Point(0, 0), size=wx.Size(130, 100)
+        )
         top_border, other_border = elevator_box.GetBordersForSizer()
 
         text_sizer = wx.BoxSizer(wx.VERTICAL)
         text_sizer.AddSpacer(top_border)
 
-        fmt_text = f'{ev.current_floor}'
+        fmt_text = f"{ev.current_floor}"
         if ev.destination is not None:
-            fmt_text += f' {Unicode.ARROW} {ev.destination}'
+            fmt_text += f" {Unicode.ARROW} {ev.destination}"
 
         floor_text = wx.StaticText(elevator_box, wx.ID_ANY, fmt_text)
 
@@ -115,8 +132,8 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
         floor_text.SetFont(font)
         text_sizer.Add(floor_text, 1, wx.ALL | wx.CENTER)
 
-        pax_text = wx.StaticText(elevator_box, wx.ID_ANY, f'{ev.load // 60} PAX')
-        text_sizer.Add(pax_text, 1, wx.ALL | wx.CENTER, other_border+10)
+        pax_text = wx.StaticText(elevator_box, wx.ID_ANY, f"{ev.load // 60} PAX")
+        text_sizer.Add(pax_text, 1, wx.ALL | wx.CENTER, other_border + 10)
 
         elevator_box.SetSizer(text_sizer)
         self.texts[ev.id] = (floor_text, pax_text)
@@ -130,7 +147,11 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
             updated = True
             self.sz.SetCols(3)
             self.sz.SetRows(2)
-        elif len(before.elevators) != len(after.elevators) and len(after.elevators) > 6 and len(after.elevators) % 3 == 1:
+        elif (
+            len(before.elevators) != len(after.elevators)
+            and len(after.elevators) > 6
+            and len(after.elevators) % 3 == 1
+        ):
             updated = True
             self.sz.SetCols(math.ceil(len(after.elevators) / 3))
             self.sz.SetRows(3)
@@ -141,15 +162,15 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
                 updated = True
                 self._add_elevator(ev)
             else:
-                fmt_text = f'{ev.current_floor}'
+                fmt_text = f"{ev.current_floor}"
                 if ev.destination is not None:
-                    fmt_text += f' {Unicode.ARROW} {ev.destination}'
+                    fmt_text += f" {Unicode.ARROW} {ev.destination}"
 
                 if self.texts[ev.id][0].GetLabel() != fmt_text:
                     updated = True
                     self.texts[ev.id][0].SetLabel(fmt_text)
 
-                fmt_pax = f'{ev.load // 60} PAX'
+                fmt_pax = f"{ev.load // 60} PAX"
                 if self.texts[ev.id][1].GetLabel() != fmt_pax:
                     updated = True
                     self.texts[ev.id][1].SetLabel(fmt_pax)
@@ -181,7 +202,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
             cols = math.ceil(num_elevators / 3)
 
         self.sz = wx.GridSizer(rows, cols, gap=wx.Size(5, 5))
- 
+
         # _, height = self.sz.CalcMin()
         self.size = wx.Size(540, 380)
         self.SetSize(self.size)
@@ -195,7 +216,13 @@ class ControlPanel(wx.Panel):
         #     raise RuntimeError('Elevator panel must be loaded first')
 
         self.size = wx.Size(540, self.window.effective_size.y - 400)
-        super().__init__(id=wx.ID_ANY, parent=window, size=self.size, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME, pos=(0, 400))
+        super().__init__(
+            id=wx.ID_ANY,
+            parent=window,
+            size=self.size,
+            style=wx.TAB_TRAVERSAL | wx.BORDER_THEME,
+            pos=(0, 400),
+        )
         self.nb = aui.AuiNotebook(self, style=wx.aui.AUI_NB_TOP)
         self.floors_selections = []
 
@@ -208,7 +235,9 @@ class ControlPanel(wx.Panel):
         if before.floors != after.floors:
             updated = True
             for element_id in (
-                ID.SELECT_ELEVATOR_ADD, ID.SELECT_PASSENGER_INITIAL, ID.SELECT_PASSENGER_DESTINATION
+                ID.SELECT_ELEVATOR_ADD,
+                ID.SELECT_PASSENGER_INITIAL,
+                ID.SELECT_PASSENGER_DESTINATION,
             ):
                 element = self.FindWindowById(element_id)
                 element.SetRange(1, after.floors)
@@ -236,13 +265,13 @@ class ControlPanel(wx.Panel):
 
     def add_elevator(self, floor):
         self.window.algorithm_thread.add_elevator(floor)
-        self.window.WriteToLog(LogLevel.INFO, f'Added elevator on floor {floor}')
+        self.window.WriteToLog(LogLevel.INFO, f"Added elevator on floor {floor}")
 
     def remove_elevator(self, elevator_id):
         try:
             elevator_id = int(elevator_id)
         except ValueError:
-            self.window.WriteToLog(LogLevel.ERROR, f'Invalid elevator id {elevator_id}')
+            self.window.WriteToLog(LogLevel.ERROR, f"Invalid elevator id {elevator_id}")
             return
 
         try:
@@ -251,13 +280,18 @@ class ControlPanel(wx.Panel):
             self.window.WriteToLog(LogLevel.ERROR, str(e))
             return
 
-        self.window.WriteToLog(LogLevel.INFO, f'Removed elevator {elevator_id}')
+        self.window.WriteToLog(LogLevel.INFO, f"Removed elevator {elevator_id}")
 
     def add_passenger(self, floor_i, floor_f):
         if floor_i == floor_f:
-            self.window.WriteToLog(LogLevel.ERROR, f'Passenger on floor {floor_i} to {floor_f} is not valid')
+            self.window.WriteToLog(
+                LogLevel.ERROR,
+                f"Passenger on floor {floor_i} to {floor_f} is not valid",
+            )
             return
-        self.window.WriteToLog(LogLevel.INFO, f'Add passenger on floor {floor_i} to {floor_f}')
+        self.window.WriteToLog(
+            LogLevel.INFO, f"Add passenger on floor {floor_i} to {floor_f}"
+        )
         return self.window.algorithm_thread.add_passenger(floor_i, floor_f)
 
     def _add_random_passengers(self, count):
@@ -267,16 +301,20 @@ class ControlPanel(wx.Panel):
 
     def set_algorithm(self, algorithm_name):
         if algorithm_name not in self.window.algorithms:
-            self.window.WriteToLog(LogLevel.ERROR, f'Algorithm {algorithm_name} not found')
+            self.window.WriteToLog(
+                LogLevel.ERROR, f"Algorithm {algorithm_name} not found"
+            )
             return
 
-        self.window.algorithm_thread.set_algorithm(self.window.algorithms[algorithm_name])
+        self.window.algorithm_thread.set_algorithm(
+            self.window.algorithms[algorithm_name]
+        )
         self.window.current_algorithm = self.window.algorithms[algorithm_name]
-        self.window.WriteToLog(LogLevel.INFO, f'Set algorithm to {algorithm_name}')
+        self.window.WriteToLog(LogLevel.INFO, f"Set algorithm to {algorithm_name}")
 
     def set_speed(self, speed):
         self.window.algorithm_thread.set_speed(speed)
-        self.window.WriteToLog(LogLevel.INFO, f'Speed set to {speed}')
+        self.window.WriteToLog(LogLevel.INFO, f"Speed set to {speed}")
 
     def set_floors(self, floor_count):
         self.window.algorithm_thread.set_floors(floor_count)
@@ -284,23 +322,31 @@ class ControlPanel(wx.Panel):
 
     def toggle_play(self):
         self.window.active = not self.window.active
-        self.window.WriteToLog(LogLevel.INFO, f"Setting play state to: {self.window.active}")
-        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel('Play' if not self.window.active else 'Pause')
+        self.window.WriteToLog(
+            LogLevel.INFO, f"Setting play state to: {self.window.active}"
+        )
+        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel(
+            "Play" if not self.window.active else "Pause"
+        )
 
     def export_simulation(self):
-        dt = datetime.now().isoformat().replace(':', '-')
-        fn = f'{dt}_{self.window.current_algorithm.name}.esi'
-        if not os.path.isdir('exports'):
-            os.mkdir('exports')
+        dt = datetime.now().isoformat().replace(":", "-")
+        fn = f"{dt}_{self.window.current_algorithm.name}.esi"
+        if not os.path.isdir("exports"):
+            os.mkdir("exports")
 
-        with open(f'exports/{fn}', 'wb') as f:
+        with open(f"exports/{fn}", "wb") as f:
             f.write(
-                f'fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00'.encode('utf8') +
-                gzip.compress(pickle.dumps(self.window.algorithm_thread.algorithm)) +
-                f'\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator'.encode('utf8')
+                f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode(
+                    "utf8"
+                )
+                + gzip.compress(pickle.dumps(self.window.algorithm_thread.algorithm))
+                + f"\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode(
+                    "utf8"
+                )
             )
 
-        self.window.WriteToLog(LogLevel.INFO, f'Exported as {fn}')
+        self.window.WriteToLog(LogLevel.INFO, f"Exported as {fn}")
 
     def reset_simulation(self):
         self.window.algorithm_thread.reset(self.window.current_algorithm)
@@ -313,28 +359,33 @@ class ControlPanel(wx.Panel):
 
         # add elevator
         elevator_sz = wx.BoxSizer(wx.HORIZONTAL)
-        elevator_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Elevators'), 0)
+        elevator_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Elevators"), 0)
 
         elevator_sz.AddSpacer(15)
-        ef_add_selection = wx.SpinCtrl(panel, id=ID.SELECT_ELEVATOR_ADD, initial=1, min=1, max=self.window.floors)
+        ef_add_selection = wx.SpinCtrl(
+            panel, id=ID.SELECT_ELEVATOR_ADD, initial=1, min=1, max=self.window.floors
+        )
         elevator_sz.Add(ef_add_selection, 1, wx.FIXED_MINSIZE)
         self.floors_selections.append(ef_add_selection)
 
-        add_elevator_btn = wx.Button(panel, wx.ID_ANY, 'Add')
+        add_elevator_btn = wx.Button(panel, wx.ID_ANY, "Add")
         add_elevator_btn.Bind(
-            wx.EVT_BUTTON,
-            lambda _: self.add_elevator(ef_add_selection.GetValue())
+            wx.EVT_BUTTON, lambda _: self.add_elevator(ef_add_selection.GetValue())
         )
         elevator_sz.Add(add_elevator_btn, 0, wx.FIXED_MINSIZE)
 
         elevator_sz.AddSpacer(15)
-        ef_remove_selection = wx.ComboBox(panel, id=ID.SELECT_ELEVATOR_REMOVE, choices=[x.id for x in self.window.algorithm_thread.algorithm.elevators])
+        ef_remove_selection = wx.ComboBox(
+            panel,
+            id=ID.SELECT_ELEVATOR_REMOVE,
+            choices=[x.id for x in self.window.algorithm_thread.algorithm.elevators],
+        )
         elevator_sz.Add(ef_remove_selection, 1, wx.FIXED_MINSIZE)
 
-        add_elevator_btn = wx.Button(panel, wx.ID_ANY, 'Remove')
+        add_elevator_btn = wx.Button(panel, wx.ID_ANY, "Remove")
         add_elevator_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self.remove_elevator(ef_remove_selection.GetValue())
+            lambda _: self.remove_elevator(ef_remove_selection.GetValue()),
         )
         elevator_sz.Add(add_elevator_btn, 0, wx.FIXED_MINSIZE)
 
@@ -343,38 +394,53 @@ class ControlPanel(wx.Panel):
 
         # passenger adding
         passenger_sz = wx.BoxSizer(wx.HORIZONTAL)
-        passenger_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'PAX'), 0)
+        passenger_sz.Add(wx.StaticText(panel, wx.ID_ANY, "PAX"), 0)
         passenger_sz.AddSpacer(10)
-        pfi_selection = wx.SpinCtrl(panel, id=ID.SELECT_PASSENGER_INITIAL, value='Start', initial=1, min=1, max=self.window.floors)
-        pff_selection = wx.SpinCtrl(panel, id=ID.SELECT_PASSENGER_DESTINATION, value='End', initial=1, min=1, max=self.window.floors)
+        pfi_selection = wx.SpinCtrl(
+            panel,
+            id=ID.SELECT_PASSENGER_INITIAL,
+            value="Start",
+            initial=1,
+            min=1,
+            max=self.window.floors,
+        )
+        pff_selection = wx.SpinCtrl(
+            panel,
+            id=ID.SELECT_PASSENGER_DESTINATION,
+            value="End",
+            initial=1,
+            min=1,
+            max=self.window.floors,
+        )
         passenger_sz.Add(pfi_selection, 1, wx.FIXED_MINSIZE)
         passenger_sz.Add(pff_selection, 1, wx.FIXED_MINSIZE)
 
-        add_passenger_btn = wx.Button(panel, wx.ID_ANY, 'Add')
+        add_passenger_btn = wx.Button(panel, wx.ID_ANY, "Add")
         add_passenger_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self.add_passenger(pfi_selection.GetValue(), pff_selection.GetValue())
+            lambda _: self.add_passenger(
+                pfi_selection.GetValue(), pff_selection.GetValue()
+            ),
         )
         passenger_sz.Add(add_passenger_btn, 0, wx.FIXED_MINSIZE)
         passenger_sz.AddSpacer(20)
 
         # -> random
-        random_passenger_count = wx.SpinCtrl(panel, value='Count', initial=1, min=1)
+        random_passenger_count = wx.SpinCtrl(panel, value="Count", initial=1, min=1)
         passenger_sz.Add(random_passenger_count, 1, wx.FIXED_MINSIZE)
-        random_passenger_btn = wx.Button(panel, wx.ID_ANY, 'Random')
+        random_passenger_btn = wx.Button(panel, wx.ID_ANY, "Random")
         random_passenger_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self._add_random_passengers(random_passenger_count.GetValue()
-        ))
+            lambda _: self._add_random_passengers(random_passenger_count.GetValue()),
+        )
         passenger_sz.Add(random_passenger_btn, 1, wx.FIXED_MINSIZE)
-
 
         sz.Add(passenger_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
 
         # algorithm selection
         algo_sz = wx.BoxSizer(wx.HORIZONTAL)
-        algo_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Algorithm'), 0)
+        algo_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Algorithm"), 0)
         algo_sz.AddSpacer(10)
 
         algo_selection = wx.Choice(panel, choices=list(self.window.algorithms.keys()))
@@ -383,7 +449,9 @@ class ControlPanel(wx.Panel):
 
         algo_selection.Bind(
             wx.EVT_CHOICE,
-            lambda _: self.set_algorithm(algo_selection.GetString(algo_selection.GetCurrentSelection()))
+            lambda _: self.set_algorithm(
+                algo_selection.GetString(algo_selection.GetCurrentSelection())
+            ),
         )
 
         sz.Add(algo_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -391,15 +459,14 @@ class ControlPanel(wx.Panel):
 
         # speed
         speed_sz = wx.BoxSizer(wx.HORIZONTAL)
-        speed_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Speed'), 0)
+        speed_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Speed"), 0)
         speed_sz.AddSpacer(10)
 
         speed_selection = wx.SpinCtrlDouble(panel, initial=3, min=0.01, inc=0.01)
         speed_sz.Add(speed_selection, 1, wx.FIXED_MINSIZE)
 
         speed_selection.Bind(
-            wx.EVT_SPINCTRLDOUBLE,
-            lambda _: self.set_speed(speed_selection.GetValue())
+            wx.EVT_SPINCTRLDOUBLE, lambda _: self.set_speed(speed_selection.GetValue())
         )
 
         sz.Add(speed_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -407,7 +474,7 @@ class ControlPanel(wx.Panel):
 
         # floors
         floor_sz = wx.BoxSizer(wx.HORIZONTAL)
-        floor_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Floors'), 0)
+        floor_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Floors"), 0)
         floor_sz.AddSpacer(10)
 
         floor_selection = wx.SpinCtrl(panel, initial=10, min=1, max=1000)
@@ -416,8 +483,7 @@ class ControlPanel(wx.Panel):
         floor_sz.AddSpacer(10)
 
         floor_selection.Bind(
-            wx.EVT_SPINCTRL,
-            lambda _: self.set_floors(floor_selection.GetValue())
+            wx.EVT_SPINCTRL, lambda _: self.set_floors(floor_selection.GetValue())
         )
 
         sz.Add(floor_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -426,26 +492,17 @@ class ControlPanel(wx.Panel):
         # control
         ctrl_sz = wx.BoxSizer(wx.HORIZONTAL)
 
-        play_btn = wx.Button(panel, ID.BUTTON_CONTROL_PLAY, 'Play')
-        play_btn.Bind(
-            wx.EVT_BUTTON,
-            lambda _: self.toggle_play()
-        )
+        play_btn = wx.Button(panel, ID.BUTTON_CONTROL_PLAY, "Play")
+        play_btn.Bind(wx.EVT_BUTTON, lambda _: self.toggle_play())
         ctrl_sz.Add(play_btn, 1, wx.FIXED_MINSIZE)
 
-        save_btn = wx.Button(panel, wx.ID_ANY, 'Export')
-        save_btn.Bind(
-            wx.EVT_BUTTON,
-            lambda _: self.export_simulation()
-        )
+        save_btn = wx.Button(panel, wx.ID_ANY, "Export")
+        save_btn.Bind(wx.EVT_BUTTON, lambda _: self.export_simulation())
         ctrl_sz.Add(save_btn, 1, wx.FIXED_MINSIZE)
         ctrl_sz.AddSpacer(10)
 
-        reset_btn = wx.Button(panel, wx.ID_ANY, 'Reset')
-        reset_btn.Bind(
-            wx.EVT_BUTTON,
-            lambda _: self.reset_simulation()
-        )
+        reset_btn = wx.Button(panel, wx.ID_ANY, "Reset")
+        reset_btn.Bind(wx.EVT_BUTTON, lambda _: self.reset_simulation())
         ctrl_sz.Add(reset_btn, 1, wx.FIXED_MINSIZE)
         ctrl_sz.AddSpacer(10)
 
@@ -462,13 +519,15 @@ class ControlPanel(wx.Panel):
 
         # max capacity
         load_sz = wx.BoxSizer(wx.HORIZONTAL)
-        load_sz.Add(wx.StaticText(panel, wx.ID_ANY, 'Max Load'), 1)
+        load_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Max Load"), 1)
         load_selection = wx.SpinCtrl(panel, initial=15, min=1)
         load_sz.Add(load_selection, 1, wx.FIXED_MINSIZE)
 
         def set_load_callback(_):
             self.window.algorithm_thread.set_max_load(load_selection.GetValue() * 60)
-            self.window.WriteToLog(LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}")
+            self.window.WriteToLog(
+                LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}"
+            )
 
         load_selection.Bind(wx.EVT_SPINCTRL, set_load_callback)
 
@@ -482,18 +541,29 @@ class ControlPanel(wx.Panel):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_BESTWRAP, size=(self.size.x, self.size.y - 20))
+        tc = wx.TextCtrl(
+            panel,
+            wx.ID_ANY,
+            "",
+            style=wx.TE_MULTILINE | wx.TE_BESTWRAP,
+            size=(self.size.x, self.size.y - 20),
+        )
         sz.Add(tc, 1, wx.EXPAND)
 
         sz.SetDimension(wx.Point(0, 0), self.size)
         self.nb.AddPage(panel, "Notes")
 
 
-
 class ElevatorStatusPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
         self.window = window
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(180, self.window.effective_size.y), pos=wx.Point(550, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(
+            id=wx.ID_ANY,
+            parent=window,
+            size=wx.Size(180, self.window.effective_size.y),
+            pos=wx.Point(550, 0),
+            style=wx.TAB_TRAVERSAL | wx.BORDER_THEME,
+        )
 
         self.rows = []
         self.InitUI()
@@ -557,12 +627,12 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         text.SetFont(button_font)
         self.sz.Add(text, 0, wx.FIXED_MINSIZE | wx.CENTER)
 
-        up_text = wx.StaticText(self, wx.ID_ANY, '00')
+        up_text = wx.StaticText(self, wx.ID_ANY, "00")
         up_text.SetFont(button_font)
 
         self.sz.Add(up_text, 0, wx.FIXED_MINSIZE)
 
-        down_text = wx.StaticText(self, wx.ID_ANY, '00')
+        down_text = wx.StaticText(self, wx.ID_ANY, "00")
         down_text.SetFont(button_font)
 
         self.rows.append((up_text, down_text))
@@ -597,7 +667,13 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
 
 class StatsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
-        super().__init__(id=wx.ID_ANY, parent=window, size=wx.Size(350, 250), pos=wx.Point(730, 0), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(
+            id=wx.ID_ANY,
+            parent=window,
+            size=wx.Size(350, 250),
+            pos=wx.Point(730, 0),
+            style=wx.TAB_TRAVERSAL | wx.BORDER_THEME,
+        )
         self.window = window
         self.nb = aui.AuiNotebook(self, style=wx.aui.AUI_NB_TOP)
 
@@ -625,7 +701,7 @@ class StatsPanel(scrolled.ScrolledPanel):
         if before.loads != after.loads:
             # floor panel
             updated = True
-            floor_fmt = ''
+            floor_fmt = ""
             floors = defaultdict(Counter)
             elevators = defaultdict(Counter)
             for load in after.loads:
@@ -634,8 +710,18 @@ class StatsPanel(scrolled.ScrolledPanel):
                 else:
                     floors[load.current_floor][load.destination_floor] += 1
 
-            elevator_fmt = '\n'.join([f'{k} {Unicode.ARROW} {", ".join(f"{kk} (x{elevators[k][kk]})" for kk in sorted(elevators[k].keys()))}' for k in sorted(elevators.keys())])
-            floor_fmt = '\n'.join([f'{k} {Unicode.ARROW} {", ".join(f"{kk} (x{floors[k][kk]})" for kk in sorted(floors[k].keys()))}' for k in sorted(floors.keys())])
+            elevator_fmt = "\n".join(
+                [
+                    f'{k} {Unicode.ARROW} {", ".join(f"{kk} (x{elevators[k][kk]})" for kk in sorted(elevators[k].keys()))}'
+                    for k in sorted(elevators.keys())
+                ]
+            )
+            floor_fmt = "\n".join(
+                [
+                    f'{k} {Unicode.ARROW} {", ".join(f"{kk} (x{floors[k][kk]})" for kk in sorted(floors[k].keys()))}'
+                    for k in sorted(floors.keys())
+                ]
+            )
 
             if self.elevator_tc.GetValue() != elevator_fmt:
                 self.elevator_tc.SetValue(elevator_fmt)
@@ -652,7 +738,12 @@ class StatsPanel(scrolled.ScrolledPanel):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        self.stats_tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP)
+        self.stats_tc = wx.TextCtrl(
+            panel,
+            wx.ID_ANY,
+            "",
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP,
+        )
         self.update_stats(self.window.algorithm_thread.algorithm)
         sz.Add(self.stats_tc, 1, wx.EXPAND)
 
@@ -664,7 +755,12 @@ class StatsPanel(scrolled.ScrolledPanel):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        self.floor_tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP)
+        self.floor_tc = wx.TextCtrl(
+            panel,
+            wx.ID_ANY,
+            "",
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP,
+        )
         sz.Add(self.floor_tc, 1, wx.EXPAND)
 
         sz.SetDimension(0, 0, 350, 250)
@@ -675,30 +771,44 @@ class StatsPanel(scrolled.ScrolledPanel):
         panel = wx.Panel(self.nb, wx.ID_ANY)
         sz = wx.BoxSizer(wx.VERTICAL)
 
-        self.elevator_tc = wx.TextCtrl(panel, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP)
+        self.elevator_tc = wx.TextCtrl(
+            panel,
+            wx.ID_ANY,
+            "",
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_BESTWRAP,
+        )
         sz.Add(self.elevator_tc, 1, wx.EXPAND)
 
         sz.SetDimension(0, 0, 350, 250)
 
         self.nb.AddPage(panel, "Elevators")
 
+
 class LogPanel(wx.Panel):
     def __init__(self, window):
         # super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
         self.window = window
-        super().__init__(id=ID.PANEL_DEBUG_LOG, parent=window, size=wx.Size(350, 380), pos=wx.Point(730, 260), style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
+        super().__init__(
+            id=ID.PANEL_DEBUG_LOG,
+            parent=window,
+            size=wx.Size(350, 380),
+            pos=wx.Point(730, 260),
+            style=wx.TAB_TRAVERSAL | wx.BORDER_THEME,
+        )
 
         self.log_messages: List[LogMessage] = []
         self.log_levels: Set[LogLevel] = set(LogLevel)
         self.log_levels.remove(LogLevel.TRACE)
         self.log_levels.remove(LogLevel.DEBUG)
         self.InitUI()
-        self.window.WriteToLog(LogLevel.INFO, 'Log started')
+        self.window.WriteToLog(LogLevel.INFO, "Log started")
 
     def OnLogUpdate(self, message):
         self.log_messages.append(message)
         if message.level in self.log_levels:
-            self.log_tc.AppendText(f'[{message.level.name[0]}] {message.tick}: {message.message}\n')
+            self.log_tc.AppendText(
+                f"[{message.level.name[0]}] {message.tick}: {message.message}\n"
+            )
 
     def OnLogLevelChanged(self, e):
         cb = e.GetEventObject()
@@ -707,21 +817,32 @@ class LogPanel(wx.Panel):
         else:
             self.log_levels.remove(LogLevel[cb.GetLabel()])
 
-        filtered_log_messages = filter(lambda x: x.level in self.log_levels, self.log_messages)
-        self.log_tc.SetValue('\n'.join(f'[{i.level.name[0]}] {i.tick}: {i.message}' for i in filtered_log_messages) + '\n')
-        # scroll to bottom
-        self.log_tc.SetScrollPos(
-            wx.VERTICAL,
-            self.log_tc.GetScrollRange(wx.VERTICAL)
+        filtered_log_messages = filter(
+            lambda x: x.level in self.log_levels, self.log_messages
         )
+        self.log_tc.SetValue(
+            "\n".join(
+                f"[{i.level.name[0]}] {i.tick}: {i.message}"
+                for i in filtered_log_messages
+            )
+            + "\n"
+        )
+        # scroll to bottom
+        self.log_tc.SetScrollPos(wx.VERTICAL, self.log_tc.GetScrollRange(wx.VERTICAL))
         self.log_tc.SetInsertionPoint(-1)
 
     def InitUI(self):
         sz = wx.BoxSizer(wx.VERTICAL)
-        sz.Add(wx.StaticText(self, wx.ID_ANY, 'Log'))
+        sz.Add(wx.StaticText(self, wx.ID_ANY, "Log"))
         sz.AddSpacer(3)
         _, height = sz.GetMinSize()
-        self.log_tc = wx.TextCtrl(self, wx.ID_ANY, '', style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL, size=wx.Size(350, 380 - height - 100))
+        self.log_tc = wx.TextCtrl(
+            self,
+            wx.ID_ANY,
+            "",
+            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL,
+            size=wx.Size(350, 380 - height - 100),
+        )
         sz.Add(self.log_tc, 1, wx.EXPAND)
 
         checkbox_sz = wx.FlexGridSizer(3, 1, 1)
@@ -775,5 +896,5 @@ def start_gui(*args):
     return app
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_gui()

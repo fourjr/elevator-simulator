@@ -30,21 +30,21 @@ class TestStats:
 
     def to_dict(self, include_raw_stats=True):
         data = {
-            'aggregated': {
-                'ticks': self.ticks.to_dict(),
-                'wait_time': self.wait_time.to_dict(),
-                'time_in_lift': self.time_in_lift.to_dict(),
-                'occupancy': self.occupancy.to_dict(),
+            "aggregated": {
+                "ticks": self.ticks.to_dict(),
+                "wait_time": self.wait_time.to_dict(),
+                "time_in_lift": self.time_in_lift.to_dict(),
+                "occupancy": self.occupancy.to_dict(),
             },
-            'raw': {
-                'ticks': self.ticks.stats,
-                'wait_time': [x.to_dict() for x in self.wait_time.stats],
-                'time_in_lift': [x.to_dict() for x in self.time_in_lift.stats],
-                'occupancy': [x.to_dict() for x in self.occupancy.stats],
-            }
+            "raw": {
+                "ticks": self.ticks.stats,
+                "wait_time": [x.to_dict() for x in self.wait_time.stats],
+                "time_in_lift": [x.to_dict() for x in self.time_in_lift.stats],
+                "occupancy": [x.to_dict() for x in self.occupancy.stats],
+            },
         }
         if not include_raw_stats:
-            data.pop('raw')
+            data.pop("raw")
         return data
 
 
@@ -74,25 +74,28 @@ class TestSettings:
 
     def to_dict(self):
         return {
-            'name': self.name,
-            'seed': self.seed,
-            'speed': self.speed,
-            'floors': self.floors,
-            'num_elevators': self.num_elevators,
-            'num_passengers': self.num_passengers,
-            'total_iterations': self.total_iterations,
+            "name": self.name,
+            "seed": self.seed,
+            "speed": self.speed,
+            "floors": self.floors,
+            "num_elevators": self.num_elevators,
+            "num_passengers": self.num_passengers,
+            "total_iterations": self.total_iterations,
         }
 
 
 class TestSuiteConsumer(ElevatorManager):
-    def __init__(
-        self,
-        in_queue, out_queue, error_queue
-    ):
+    def __init__(self, in_queue, out_queue, error_queue):
         self.algorithms = load_algorithms()
-        super().__init__(self, None, self.algorithms['Knuth'], gui=False, log_func=self.log_message)
+        super().__init__(
+            self, None, self.algorithms["Knuth"], gui=False, log_func=self.log_message
+        )
         self._running = False
-        self._process = mp.Process(target=self.process_loop, args=(in_queue, out_queue, error_queue), daemon=True)
+        self._process = mp.Process(
+            target=self.process_loop,
+            args=(in_queue, out_queue, error_queue),
+            daemon=True,
+        )
         self.name = self._process.name
         self.latest_load_move = 0
         self.previous_loads = []
@@ -125,15 +128,27 @@ class TestSuiteConsumer(ElevatorManager):
                 self.algorithm.loads.extend(settings.loads)
 
                 self.active = True
-                self.log_message(LogLevel.INFO, f'{self.name} START SIMULATION: {n_iter=} {settings.name=}', LogOrigin.TEST)
+                self.log_message(
+                    LogLevel.INFO,
+                    f"{self.name} START SIMULATION: {n_iter=} {settings.name=}",
+                    LogOrigin.TEST,
+                )
 
                 try:
                     self.start_simulation()
                 except TestTimeout as e:
                     # continue with next simulation
-                    self.log_message(LogLevel.WARNING, f'{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {self.current_tick=}', LogOrigin.TEST)
+                    self.log_message(
+                        LogLevel.WARNING,
+                        f"{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {self.current_tick=}",
+                        LogOrigin.TEST,
+                    )
                 else:
-                    self.log_message(LogLevel.INFO, f'{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}', LogOrigin.TEST)
+                    self.log_message(
+                        LogLevel.INFO,
+                        f"{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}",
+                        LogOrigin.TEST,
+                    )
                     out_queue.put(((n_iter, settings), self.algorithm.stats))
 
                 in_queue.task_done()
@@ -149,9 +164,17 @@ class TestSuiteConsumer(ElevatorManager):
 
             if self.current_simulation is not None:
                 n_iter, settings = self.current_simulation
-                self.log_message(LogLevel.ERROR, f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}', LogOrigin.TEST)
+                self.log_message(
+                    LogLevel.ERROR,
+                    f"{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}",
+                    LogOrigin.TEST,
+                )
             else:
-                self.log_message(LogLevel.ERROR, f'{self.name} ERROR SIMULATION: {self.current_tick=}', LogOrigin.TEST)
+                self.log_message(
+                    LogLevel.ERROR,
+                    f"{self.name} ERROR SIMULATION: {self.current_tick=}",
+                    LogOrigin.TEST,
+                )
 
             error_queue.put((self.name, e))
 
@@ -163,7 +186,11 @@ class TestSuiteConsumer(ElevatorManager):
         if self.current_tick - self.latest_load_move > 500:
             self.end_simulation()
             n_iter, settings = self.current_simulation
-            self.log_message(LogLevel.ERROR, f'{self.name=} TIMEOUT: {n_iter=} {settings.name=}', LogOrigin.TEST)
+            self.log_message(
+                LogLevel.ERROR,
+                f"{self.name=} TIMEOUT: {n_iter=} {settings.name=}",
+                LogOrigin.TEST,
+            )
             raise TestTimeout(self.name, n_iter, settings)
 
     def on_load_move(self, _):
@@ -177,18 +204,31 @@ class TestSuiteConsumer(ElevatorManager):
         self._running = False
 
     def log_message(self, level: LogLevel, message, origin=LogOrigin.SIMULATION):
-        if (level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO) or origin == LogOrigin.TEST):
+        if (
+            level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO)
+            or origin == LogOrigin.TEST
+        ):
             print(level.name, message)
 
     def __getstate__(self):
         obj = self.__dict__.copy()
-        del obj['_process']
+        del obj["_process"]
         return obj
 
 
 class ErrorProcess(mp.Process):
-    def __init__(self, in_queue, out_queue, error_queue, consumers: List[TestSuiteConsumer], close_event):
-        super().__init__(target=self.process_loop, args=(in_queue, out_queue, error_queue, consumers, close_event))
+    def __init__(
+        self,
+        in_queue,
+        out_queue,
+        error_queue,
+        consumers: List[TestSuiteConsumer],
+        close_event,
+    ):
+        super().__init__(
+            target=self.process_loop,
+            args=(in_queue, out_queue, error_queue, consumers, close_event),
+        )
 
     def process_loop(self, in_queue, out_queue, error_queue, consumers, close_event):
         while close_event.is_set() is False:
@@ -202,7 +242,7 @@ class ErrorProcess(mp.Process):
             consumer.start()
             consumers[consumer.name] = consumer
 
-            print(f'[E_HANDLER] INFO {name} died, restarting as {consumer.name}')
+            print(f"[E_HANDLER] INFO {name} died, restarting as {consumer.name}")
             print(e.formatted_exception)
             error_queue.task_done()
 
@@ -211,12 +251,16 @@ class TestSuite:
     def __init__(self, tests, max_processes=None, *, include_raw_stats=True):
         self.tests: List[TestSettings] = tests
         self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
-        self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats]] = Queue()
+        self.out_queue: Queue[
+            Tuple[Tuple[int, TestSettings], SimulationStats]
+        ] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
         self.close_event = mp.Event()
         self.include_raw_stats = include_raw_stats
 
-        hard_max_processes = min(mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests))
+        hard_max_processes = min(
+            mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests)
+        )
         if max_processes is None:
             self.max_processes = hard_max_processes
         else:
@@ -234,13 +278,21 @@ class TestSuite:
     def start(self):
         """Starts the Test Suite"""
         for _ in range(self.max_processes):
-            consumer = TestSuiteConsumer(self.in_queue, self.out_queue, self.error_queue)
+            consumer = TestSuiteConsumer(
+                self.in_queue, self.out_queue, self.error_queue
+            )
             self.consumers[consumer.name] = consumer
 
         for p in self.consumers.values():
             p.start()
 
-        self.error_process = ErrorProcess(self.in_queue, self.out_queue, self.error_queue, self.consumers, self.close_event)
+        self.error_process = ErrorProcess(
+            self.in_queue,
+            self.out_queue,
+            self.error_queue,
+            self.consumers,
+            self.close_event,
+        )
         self.error_process.start()
 
         try:
@@ -248,7 +300,7 @@ class TestSuite:
         except KeyboardInterrupt:
             return
 
-        print('All tests finished, gathering results')
+        print("All tests finished, gathering results")
         while True:
             try:
                 (_, settings), stats = self.out_queue.get(block=False)
@@ -263,17 +315,20 @@ class TestSuite:
         self.close()
 
     def save_results(self):
-        dt = datetime.now().isoformat().replace(':', '-')
-        if not os.path.isdir('results'):
-            os.mkdir('results')
+        dt = datetime.now().isoformat().replace(":", "-")
+        if not os.path.isdir("results"):
+            os.mkdir("results")
 
-        fn = f'results/{dt}.json'
+        fn = f"results/{dt}.json"
 
-        data = [{**settings.to_dict(), 'stats': stats.to_dict(self.include_raw_stats)} for settings, stats in self.results.values()]
-        with open(fn, 'w') as f:
+        data = [
+            {**settings.to_dict(), "stats": stats.to_dict(self.include_raw_stats)}
+            for settings, stats in self.results.values()
+        ]
+        with open(fn, "w") as f:
             json.dump(data, f, indent=4)
 
-        print(f'Saved results to {fn}')
+        print(f"Saved results to {fn}")
 
     def close(self):
         self.save_results()

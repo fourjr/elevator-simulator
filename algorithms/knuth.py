@@ -12,7 +12,12 @@ class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
 
     @property
     def pending_loads(self) -> List[Load]:
-        return list(filter(lambda x: x.initial_floor not in self.attended_to.values(), super().pending_loads))
+        return list(
+            filter(
+                lambda x: x.initial_floor not in self.attended_to.values(),
+                super().pending_loads,
+            )
+        )
 
     def _calculate_direction(self, elevator, destination_floor):
         if elevator.current_floor > destination_floor:
@@ -84,6 +89,7 @@ class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
                 del self.attended_to[elevator.id]
 
         return super().post_tick()
+
 
 __name__ = "Knuth"
 __algorithm__ = ElevatorAlgorithmKnuth

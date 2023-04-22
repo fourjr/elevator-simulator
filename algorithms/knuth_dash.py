@@ -38,5 +38,6 @@ class ElevatorAlgorithmKnuthDash(ElevatorAlgorithmKnuth):
 
         return super().post_tick()
 
+
 __name__ = "Knuth Dash"
 __algorithm__ = ElevatorAlgorithmKnuthDash
