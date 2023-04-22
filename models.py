@@ -1,4 +1,4 @@
-import random
+import itertools
 import statistics
 import threading
 import time
@@ -169,8 +169,9 @@ class Load:
         tick_created: int
         enter_lift_tick: int
     """
+    _id_iter = itertools.count()
 
-    id: int = field(init=False, default_factory=lambda: random.randint(0, 1000000))
+    id: int = field(init=False, default_factory=lambda: next(Load._id_iter))
     initial_floor: int
     destination_floor: int
     weight: int
@@ -445,7 +446,11 @@ class Elevator:
 
         for load in to_remove:
             self.loads.remove(load)
-            self.manager.algorithm.loads.remove(load)
+            try:
+                self.manager.algorithm.loads.remove(load)
+            except ValueError:
+                print(load, self.manager.algorithm.loads)
+                raise
 
             self.manager.algorithm.on_load_removed(load, self)
 

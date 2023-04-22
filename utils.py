@@ -1,8 +1,6 @@
 import glob
 import importlib
 import os
-import statistics
-from typing import List
 
 from errors import InvalidAlgorithm
 from models import ElevatorAlgorithm
@@ -17,6 +15,7 @@ class Unicode:
 class Constants:
     DEFAULT_ALGORITHM = "Knuth"
     MAX_PROCESSES = 3
+
 
 def load_algorithms() -> dict[str, ElevatorAlgorithm]:
     algorithms = {}

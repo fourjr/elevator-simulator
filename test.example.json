@@ -1,0 +1,46 @@
+[
+    {
+        "name": "Knuth Benchmark",
+        "algorithm_name": "Knuth",
+        "total_iterations": 10,
+        "seed": 1234,
+        "speed": 500,
+        "floors": 50,
+        "num_elevators": 8,
+        "num_passengers": 1000,
+        "max_load": 900
+    },
+    {
+        "name": "KnuthDash Benchmark",
+        "algorithm_name": "Knuth Dash",
+        "total_iterations": 5,
+        "seed": 1235,
+        "speed": 500,
+        "floors": 50,
+        "num_elevators": 8,
+        "num_passengers": 1000,
+        "max_load": 900
+    },
+    {
+        "name": "Rolling Benchmark",
+        "algorithm_name": "Rolling",
+        "total_iterations": 10,
+        "seed": 1234,
+        "speed": 500,
+        "floors": 50,
+        "num_elevators": 8,
+        "num_passengers": 1000,
+        "max_load": 900
+    },
+    {
+        "name": "Scatter Benchmark",
+        "algorithm_name": "Scatter",
+        "total_iterations": 10,
+        "seed": 1234,
+        "speed": 500,
+        "floors": 50,
+        "num_elevators": 8,
+        "num_passengers": 1000,
+        "max_load": 900
+    }
+]

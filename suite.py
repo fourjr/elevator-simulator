@@ -28,7 +28,7 @@ class TestStats:
         self.time_in_lift.append(stats.time_in_lift)
         self.occupancy.append(stats.occupancy)
 
-    def to_dict(self, include_raw=True):
+    def to_dict(self, include_raw_stats=True):
         data = {
             'aggregated': {
                 'ticks': self.ticks.to_dict(),
@@ -43,7 +43,7 @@ class TestStats:
                 'occupancy': [x.to_dict() for x in self.occupancy.stats],
             }
         }
-        if not include_raw:
+        if not include_raw_stats:
             data.pop('raw')
         return data
 
@@ -141,6 +141,9 @@ class TestSuiteConsumer(ElevatorManager):
         except KeyboardInterrupt:
             return
         except Exception as e:
+            # mark as done although errored
+            in_queue.task_done()
+
             # need to format first as pickle will remove the traceback
             e.formatted_exception = traceback.format_exc().strip()
 
@@ -205,13 +208,13 @@ class ErrorProcess(mp.Process):
 
 
 class TestSuite:
-    def __init__(self, tests, max_processes=None, *, include_raw=True):
+    def __init__(self, tests, max_processes=None, *, include_raw_stats=True):
         self.tests: List[TestSettings] = tests
         self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
         self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats]] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
         self.close_event = mp.Event()
-        self.include_raw = include_raw
+        self.include_raw_stats = include_raw_stats
 
         hard_max_processes = min(mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests))
         if max_processes is None:
@@ -266,7 +269,7 @@ class TestSuite:
 
         fn = f'results/{dt}.json'
 
-        data = [{**settings.to_dict(), 'stats': stats.to_dict(self.include_raw)} for settings, stats in self.results.values()]
+        data = [{**settings.to_dict(), 'stats': stats.to_dict(self.include_raw_stats)} for settings, stats in self.results.values()]
         with open(fn, 'w') as f:
             json.dump(data, f, indent=4)
 
