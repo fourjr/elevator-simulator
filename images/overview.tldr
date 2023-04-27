@@ -71,7 +71,7 @@
       "isMobileMode": false,
       "isSnapMode": false,
       "lastUpdatedPageId": "page:Hyttx6HZeWB94kTmvlj-N",
-      "lastUsedTabId": "instance:ZBwyeim6A6ZB5ciZYQdrv",
+      "lastUsedTabId": "instance:IgS9lS5QUMDIcjp-6nY65",
       "id": "user_document:02TSIf_LNUm4KFiHosLXq",
       "userId": "user:0fR_A-xiFRbXN_UoIr-3a",
       "typeName": "user_document"
@@ -128,18 +128,18 @@
       "typeName": "user"
     },
     {
-      "lastUsedInstanceId": "instance:ZBwyeim6A6ZB5ciZYQdrv",
-      "lastActivityTimestamp": 1682623745452,
+      "lastUsedInstanceId": "instance:IgS9lS5QUMDIcjp-6nY65",
+      "lastActivityTimestamp": 1682624230263,
       "cursor": {
-        "x": 1685.0427784965443,
-        "y": 485.4261439577674,
+        "x": 1042.7234689542588,
+        "y": 184.77141228479357,
         "z": 0
       },
       "viewportPageBounds": {
-        "x": 343.86986329820417,
-        "y": -509.2909628172765,
-        "w": 1019.2152447170683,
-        "h": 1826.9670383970042
+        "x": 343.8698632982042,
+        "y": 1.1568452750916265,
+        "w": 1019.2152447170682,
+        "h": 806.071422212268
       },
       "color": "#39B178",
       "id": "user_presence:hkp40zmLjG4QAa3dJU_n6",
@@ -292,6 +292,66 @@
       "pageId": "page:Hyttx6HZeWB94kTmvlj-N",
       "instanceId": "instance:ZBwyeim6A6ZB5ciZYQdrv",
       "cameraId": "camera:YFnDNsE6mygyw7DbtcXpk",
+      "typeName": "instance_page_state"
+    },
+    {
+      "followingUserId": null,
+      "propsForNextShape": {
+        "opacity": "1",
+        "color": "black",
+        "labelColor": "black",
+        "dash": "draw",
+        "fill": "solid",
+        "size": "s",
+        "icon": "file",
+        "font": "draw",
+        "align": "start",
+        "geo": "rectangle",
+        "arrowheadStart": "none",
+        "arrowheadEnd": "arrow",
+        "spline": "line"
+      },
+      "brush": null,
+      "scribble": null,
+      "cursor": {
+        "type": "default",
+        "color": "black",
+        "rotation": 0
+      },
+      "isFocusMode": false,
+      "exportBackground": true,
+      "isDebugMode": false,
+      "isToolLocked": false,
+      "screenBounds": {
+        "x": 0,
+        "y": 0,
+        "w": 757.4400024414062,
+        "h": 599.0400390625
+      },
+      "id": "instance:IgS9lS5QUMDIcjp-6nY65",
+      "userId": "user:0fR_A-xiFRbXN_UoIr-3a",
+      "currentPageId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "typeName": "instance"
+    },
+    {
+      "x": -343.8698632982042,
+      "y": -1.1568452750916265,
+      "z": 0.743160001155271,
+      "id": "camera:mMsoJkP1BS_2UTDn39z0A",
+      "typeName": "camera"
+    },
+    {
+      "editingId": null,
+      "croppingId": null,
+      "selectedIds": [],
+      "hoveredId": null,
+      "erasingIds": [],
+      "hintingIds": [],
+      "focusLayerId": null,
+      "id": "instance_page_state:2JEjs-irxKbyCB3-KUft-",
+      "pageId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "instanceId": "instance:IgS9lS5QUMDIcjp-6nY65",
+      "cameraId": "camera:mMsoJkP1BS_2UTDn39z0A",
       "typeName": "instance_page_state"
     },
     {
@@ -1000,38 +1060,10 @@
       "typeName": "shape"
     },
     {
-      "x": 1020.3200073242188,
-      "y": 155.04325571712582,
-      "rotation": 0,
-      "isLocked": false,
-      "type": "geo",
-      "props": {
-        "w": 200.07496643066406,
-        "h": 56.28500175476074,
-        "geo": "oval",
-        "color": "light-violet",
-        "labelColor": "black",
-        "fill": "solid",
-        "dash": "draw",
-        "size": "s",
-        "opacity": "0.5",
-        "font": "draw",
-        "text": "handles logging",
-        "align": "start",
-        "growY": 0,
-        "url": ""
-      },
-      "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
-      "index": "aG",
-      "id": "shape:DWJ7KSkRX9dieTUabLwGY",
-      "typeName": "shape"
-    },
-    {
       "x": 841.3599853515625,
       "y": 290.8225498199463,
       "rotation": 0,
       "isLocked": false,
-      "id": "shape:vNDSMXwPFzYzj7BFg59p2",
       "type": "text",
       "props": {
         "opacity": "1",
@@ -1046,6 +1078,7 @@
       },
       "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
       "index": "aH",
+      "id": "shape:vNDSMXwPFzYzj7BFg59p2",
       "typeName": "shape"
     }
   ]
