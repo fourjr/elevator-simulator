@@ -33,3 +33,15 @@ class LogLevel(IntEnum):
 class LogOrigin(IntEnum):
     SIMULATION = 1
     TEST = 2
+
+
+class Unicode:
+    UP = "\u2191"
+    DOWN = "\u2193"
+    ARROW = "\u2192"
+
+
+class Constants:
+    DEFAULT_ALGORITHM = "SCAN"
+    DEFAULT_FLOORS = 10
+    MAX_PROCESSES = 3

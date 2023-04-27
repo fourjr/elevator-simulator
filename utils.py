@@ -9,17 +9,6 @@ from errors import InvalidAlgorithm
 from models import ElevatorAlgorithm
 
 
-class Unicode:
-    UP = "\u2191"
-    DOWN = "\u2193"
-    ARROW = "\u2192"
-
-
-class Constants:
-    DEFAULT_ALGORITHM = "Knuth"
-    MAX_PROCESSES = 3
-
-
 def load_algorithms() -> dict[str, ElevatorAlgorithm]:
     algorithms = {}
     for i in glob.iglob("algorithms/*.py"):
@@ -41,13 +30,16 @@ def load_algorithms() -> dict[str, ElevatorAlgorithm]:
     return algorithms
 
 
-def save_algorithm(algorithm):
+def save_algorithm(algorithm, fn=None):
     dt = datetime.now().isoformat().replace(":", "-")
-    fn = f"{dt}_{algorithm.name}.esi"
+    if fn is None:
+        fn = f"{dt}_{algorithm.name}.esi"
+
     if not os.path.isdir("exports"):
         os.mkdir("exports")
 
-    with open(f"exports/{fn}", "wb") as f:
+    fp = os.path.join("exports", fn)
+    with open(fp, "wb") as f:
         f.write(
             f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode(
                 "utf8"
@@ -59,3 +51,8 @@ def save_algorithm(algorithm):
         )
 
     return fn
+
+def split_array(a, n):
+    """https://stackoverflow.com/a/2135920/8129786"""
+    k, m = divmod(len(a), n)
+    return (a[(i % len(a))*k+min(i % len(a), m):(i+1)*k+min((i % len(a))+1, m)] for i in range(n))

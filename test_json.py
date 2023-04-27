@@ -15,14 +15,34 @@ if __name__ == "__main__":
     fp = " ".join(sys.argv[1:])
 
     if fp == "":
-        raise ValueError("No file path provided")
+        # raise ValueError("No file path provided")
+        fp = "test.example.json"
+        print(f"No file path provided, using {fp}")
 
     with open(fp) as f:
-        data = json.load(f)
+        json_data = json.load(f)
+
+    options = {
+        'max_processes': None,
+        'include_raw_stats': True,
+        'export_artefacts': True
+    }
+
+    try:
+        user_options = json_data['options']
+    except KeyError:
+        pass
+    else:
+        options.update(user_options)
+
+    try:
+        data = json_data['tests']
+    except KeyError:
+        raise KeyError("JSON data must have a 'tests' key")
 
     # ensure validity of file
     if not isinstance(data, list):
-        raise TypeError("JSON data must be a list")
+        raise TypeError("tests data must be a list")
 
     required_fields = set()
     for k, v in TestSettings.__dataclass_fields__.items():
@@ -40,11 +60,12 @@ if __name__ == "__main__":
 
         if not all(k in test for k in required_fields):
             raise KeyError(
-                f'JSON data must have all of the following keys: {", ".join(required_fields)}'
+                f'Each test data must have all of the following keys: {", ".join(required_fields)}'
             )
 
         # create a test settings object for the suite to handle
         tests.append(TestSettings(**test))
 
-    suite = TestSuite(tests, include_raw_stats=True)
+    print("Starting test suite...")
+    suite = TestSuite(tests, **options)
     suite.start()

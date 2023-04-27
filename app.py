@@ -13,10 +13,10 @@ import wx.lib.scrolledpanel as scrolled
 import wx.lib.newevent as wxne
 import wx.aui as aui
 
-from enums import ID
+from enums import ID, Unicode, Constants
 from errors import BadArgument
 from models import LogLevel, LogMessage, ElevatorManagerThread
-from utils import Constants, Unicode, load_algorithms, save_algorithm
+from utils import load_algorithms, save_algorithm
 
 
 (UpdateAlgorithm, EVT_UPDATE_MANAGER) = wxne.NewEvent()
@@ -152,18 +152,18 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
     def OnUpdateAlgorithm(self, before, after):
         # changes to track: current_floor, destination, new elevators
         updated = False
-        if len(before.elevators) > 6 and len(after.elevators) <= 6:
-            updated = True
-            self.sz.SetCols(3)
-            self.sz.SetRows(2)
-        elif (
-            len(before.elevators) != len(after.elevators)
-            and len(after.elevators) > 6
-            and len(after.elevators) % 3 == 1
-        ):
-            updated = True
-            self.sz.SetCols(math.ceil(len(after.elevators) / 3))
-            self.sz.SetRows(3)
+        if len(before.elevators) != len(after.elevators):
+            if len(before.elevators) > 6 and len(after.elevators) <= 6:
+                updated = True
+                self.sz.SetCols(3)
+                self.sz.SetRows(2)
+            elif (
+                len(after.elevators) > 6
+                and math.ceil(len(before.elevators) / 3) != math.ceil(len(after.elevators) / 3)
+            ):
+                updated = True
+                self.sz.SetCols(math.ceil(len(after.elevators) / 3))
+                self.sz.SetRows(3)
 
         # elevator added
         for ev in after.elevators:
@@ -357,10 +357,10 @@ class ControlPanel(wx.Panel):
             paths = dlg.GetPaths()
             fp = paths[0]
 
-            self.reset_simulation()
             self.window._import_simulation(fp)
+            _, fn = os.path.split(fp)
 
-            self.window.WriteToLog(LogLevel.INFO, f"Imported {fp}")
+            self.window.WriteToLog(LogLevel.INFO, f"Imported {fn}")
 
         dlg.Destroy()
 
@@ -605,7 +605,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
         elif before.floors > after.floors:
             updated = True
             count = self.sz.GetItemCount()
-            to_remove = (before.floors - after.floors) * 5
+            to_remove = (before.floors - after.floors) * 3
             for i in range(to_remove):
                 self.sz.Hide(count - to_remove)
                 self.sz.Remove(count - to_remove)

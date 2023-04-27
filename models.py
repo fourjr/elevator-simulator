@@ -6,7 +6,7 @@ import wx
 from dataclasses import dataclass, field
 from typing import Callable, List, Tuple
 
-from enums import Direction, LogLevel
+from enums import Direction, LogLevel, Constants
 from errors import BadArgument, FullElevator
 
 
@@ -116,6 +116,9 @@ class CombinedStats:
 
         return CombinedStats(self.stats + [other])
 
+    def __len__(self):
+        return len(self.stats)
+
     def to_dict(self):
         return {
             "mean": self.mean,
@@ -173,6 +176,7 @@ class Load:
         elevator: Optional[Elevator]
             Elevator the load is in
         tick_created: int
+            Default: 0
         enter_lift_tick: int
     """
 
@@ -184,7 +188,7 @@ class Load:
     weight: int
     current_floor: int = field(init=False, default=None)
     elevator: "Elevator" = field(init=False, default=None, repr=False)
-    tick_created: int = field(init=False, default=None, repr=False)
+    tick_created: int = field(init=False, default=0, repr=False)
     enter_lift_time: int = field(init=False, default=None, repr=False)
 
     def __post_init__(self):
@@ -202,9 +206,9 @@ class Load:
 class ElevatorAlgorithm:
     """A global class that houses the elevators"""
 
-    def __init__(self, manager, floors, *, elevators=None, loads=None) -> None:
+    def __init__(self, manager, floors=None, *, elevators=None, loads=None) -> None:
         self.manager = manager
-        self.floors = floors
+        self._floors = floors if floors is not None else Constants.DEFAULT_FLOORS
         self.elevators: List[Elevator] = elevators or []
         self.loads: List[Load] = loads or []
         self.max_load = 15 * 60
@@ -213,6 +217,15 @@ class ElevatorAlgorithm:
         self.wait_times = GeneratedStats()
         self.time_in_lift = GeneratedStats()
         self.occupancy = GeneratedStats()
+
+    @property
+    def floors(self):
+        return self._floors
+
+    @floors.setter
+    def floors(self, value):
+        self._floors = value
+        self.on_floors_changed()
 
     @property
     def stats(self):
@@ -263,7 +276,25 @@ class ElevatorAlgorithm:
         """
         return True
 
-    def on_load_removed(self, load, elevator):
+    def pre_tick(self):
+        """Runs at the start of every tick"""
+        pass
+
+    def post_tick(self):
+        """Runs at the end of every tick"""
+        self.tick_count += 1
+
+    def on_load_load(self, load, elevator):
+        """Runs when a load is added to an elevator
+
+        load: Load
+            The load to check
+        elevator: Elevator
+            The elevator to check
+        """
+        pass
+
+    def on_load_unload(self, load, elevator):
         """Runs after a load is unloaded
 
         load: Load
@@ -273,23 +304,66 @@ class ElevatorAlgorithm:
         """
         pass
 
-    def pre_tick(self):
-        """Runs at the start of every tick"""
-        pass
+    def on_elevator_move(self, elevator):
+        """Runs when an elevator moves
 
-    def post_tick(self):
-        """Runs at the end of every tick"""
-        self.tick_count += 1
-
-    def on_load_added(self, load, elevator):
-        """Runs when a load is added to an elevator
-
-        load: Load
-            The load to check
         elevator: Elevator
-            The elevator to check
+            The elevator that moved
         """
         pass
+
+    def on_elevator_added(self, elevator):
+        """Runs when an elevator is added
+
+        elevator: Elevator
+            The elevator that was added
+        """
+        pass
+
+    def on_elevator_removed(self, elevator):
+        """Runs when an elevator is removed
+
+        elevator: Elevator
+            The elevator that was removed
+        """
+        pass
+
+    def on_floors_changed(self):
+        """Runs when the number of floors is changed"""
+        pass
+
+    def on_load_added(self, load):
+        """Runs when a load is added
+
+        load: Load
+            The load that was added
+        """
+        pass
+
+    def on_load_removed(self, load):
+        """Runs when a load is removed
+
+        load: Load
+            The load that was removed
+        """
+        pass
+
+    def add_load(self, load):
+        """Adds a load to the system
+        
+        load: Load
+            The load to add"""
+        self.loads.append(load)
+        self.on_load_added(load)
+
+    def remove_load(self, load):
+        """Removes a load from the system
+        
+        load: Load
+            The load to remove
+        """
+        self.loads.remove(load)
+        self.on_load_removed(load)
 
     def create_elevator(self, current_floor=1, attributes=None):
         """Creates a new elevator
@@ -305,6 +379,7 @@ class ElevatorAlgorithm:
             new_id = self.elevators[-1].id + 1
         elevator = Elevator(self.manager, new_id, current_floor, attributes)
         self.elevators.append(elevator)
+        self.on_elevator_added(elevator)
         return elevator
 
     def remove_elevator(self, elevator_id):
@@ -316,6 +391,7 @@ class ElevatorAlgorithm:
         for elevator in self.elevators:
             if elevator.id == elevator_id:
                 self.elevators.remove(elevator)
+                self.on_elevator_removed(elevator_id)
                 return
         raise BadArgument(f"No elevator with id {elevator_id}")
 
@@ -329,7 +405,7 @@ class ElevatorAlgorithm:
         """
         load = Load(initial, destination, 60)
         load.tick_created = self.manager.current_tick
-        self.loads.append(load)
+        self.add_load(load)
 
     def cycle(self):
         """Runs a cycle of the elevator algorithm"""
@@ -366,7 +442,8 @@ class ElevatorAlgorithm:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["manager"]
+        if "manager" in state:
+            del state["manager"]
         return state
 
 
@@ -383,7 +460,7 @@ class Elevator:
 
     @property
     def destination(self):
-        if self._destination == self.current_floor or self._destination is None:
+        if self._destination is None:
             self._destination = self.manager.algorithm.get_new_destination(self)
 
         return self._destination
@@ -408,7 +485,7 @@ class Elevator:
 
     @current_floor.setter
     def current_floor(self, value):
-        return self._move(self.current_floor - value)
+        return self._move(value - self.current_floor)
 
     def _move(self, increment):
         """Moves the elevator
@@ -416,9 +493,6 @@ class Elevator:
         increment: int
             The number of floors to move the elevator by (-1 or 1)
         """
-        if abs(increment) != 1:
-            raise BadArgument("Elevator can only move by 1 floor at a time")
-
         self.manager.WriteToLog(
             LogLevel.TRACE,
             f"Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}",
@@ -431,7 +505,7 @@ class Elevator:
             self.manager.on_load_move(load)
 
             # unloading off elevator
-            if  load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(load, self):
+            if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(load, self):
                 self.manager.WriteToLog(
                     LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
                 )
@@ -443,9 +517,9 @@ class Elevator:
 
         for load in to_remove:
             self.loads.remove(load)
-            self.manager.algorithm.loads.remove(load)
+            self.manager.algorithm.remove_load(load)
 
-            self.manager.algorithm.on_load_removed(load, self)
+            self.manager.algorithm.on_load_unload(load, self)
 
     def cycle(self):
         """Runs a cycle of the elevator"""
@@ -460,8 +534,9 @@ class Elevator:
 
         if increment != 0:
             self._move(increment)
+            self.manager.algorithm.on_elevator_move(self)
 
-        if self.destination is None:
+        if self._destination == self.current_floor or self._destination is None:
             self._destination = self.manager.algorithm.get_new_destination(self)
 
     def add_load(self, load):
@@ -475,10 +550,13 @@ class Elevator:
             raise FullElevator(self.id)
 
         self.loads.append(load)
-        self.manager.algorithm.on_load_added(load, self)
+        self.manager.algorithm.on_load_load(load, self)
 
     def __repr__(self) -> str:
-        return f"<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>"
+        if getattr(self, 'manager', None):
+            return f"<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>"
+        else:
+            return f"<Elevator* {self.id} load={self.load // 60} current_floor={self._current_floor}>"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Elevator):
@@ -487,7 +565,8 @@ class Elevator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state["manager"]
+        if "manager" in state:
+            del state["manager"]
         return state
 
 
@@ -505,7 +584,7 @@ class ElevatorManager:
         self.parent = parent
         self.event = event
         self.speed = 3
-        self.algorithm: ElevatorAlgorithm = algorithm(self, 10)
+        self.algorithm: ElevatorAlgorithm = algorithm(self)
         self.active = False
         self.is_open = True
         self.current_tick = 0
@@ -589,7 +668,7 @@ class ElevatorManager:
 
     def reset(self, cls: ElevatorAlgorithm):
         self.current_tick = 0
-        self.algorithm = cls(self, self.algorithm.floors)
+        self.algorithm = cls(self)
         self.send_event()
 
     def set_active(self, active: bool):

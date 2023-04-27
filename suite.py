@@ -1,3 +1,4 @@
+import copy
 import os
 import queue
 import json
@@ -9,10 +10,10 @@ import traceback
 from typing import List, Tuple
 from multiprocessing import Queue, JoinableQueue
 
-from enums import LogLevel, LogOrigin
+from enums import Constants, LogLevel, LogOrigin
 from errors import TestTimeout
-from models import CombinedStats, Load, SimulationStats, ElevatorManager
-from utils import load_algorithms
+from models import CombinedStats, ElevatorAlgorithm, Load, SimulationStats, ElevatorManager
+from utils import load_algorithms, save_algorithm
 
 
 @dataclass
@@ -21,6 +22,16 @@ class TestStats:
     wait_time: CombinedStats = field(default_factory=CombinedStats)
     time_in_lift: CombinedStats = field(default_factory=CombinedStats)
     occupancy: CombinedStats = field(default_factory=CombinedStats)
+
+    def __len__(self):
+        assert (
+            len(self.ticks)\
+                == len(self.wait_time)
+                == len(self.time_in_lift)
+                == len(self.occupancy)
+        )
+
+        return len(self.ticks)
 
     def append(self, stats: SimulationStats):
         self.ticks.append(stats.ticks)
@@ -50,6 +61,29 @@ class TestStats:
 
 @dataclass
 class TestSettings:
+    """Settings for a single test
+    
+    name: str
+        Name of the test
+    seed: int
+        Seed for the random number generator
+    speed: int
+        Speed of the simulation in relative ticks # TODO: improve explanation
+    floors: int
+        Number of floors in the building
+    num_elevators: int
+        Number of elevators in the building
+    num_passengers: int
+        Number of passengers in the building (60kg loads)
+    algorithm_name: str
+        Name of the algorithm to use
+    total_iterations: int
+        Number of iterations to run the test for
+    max_load: int
+        Maximum load of the elevators (in kg)
+    loads: Optional[List[Load]]
+        List of custom loads to use
+    """
     name: str
     seed: int
     speed: int
@@ -65,14 +99,13 @@ class TestSettings:
         for _ in range(self.num_passengers):
             initial, destination = random.sample(range(1, self.floors + 1), 2)
             load = Load(initial, destination, 60)
-            load.tick_created = 0
             self.loads.append(load)
 
     @property
     def algorithm(self):
         return self.suite.algorithms[self.algorithm_name]
 
-    def to_dict(self):
+    def to_dict(self, iteration_count=None):
         return {
             "name": self.name,
             "seed": self.seed,
@@ -80,20 +113,20 @@ class TestSettings:
             "floors": self.floors,
             "num_elevators": self.num_elevators,
             "num_passengers": self.num_passengers,
-            "total_iterations": self.total_iterations,
+            "total_iterations": iteration_count or self.total_iterations,
         }
 
 
 class TestSuiteConsumer(ElevatorManager):
-    def __init__(self, in_queue, out_queue, error_queue):
+    def __init__(self, in_queue, out_queue, error_queue, export_queue):
         self.algorithms = load_algorithms()
         super().__init__(
-            self, None, self.algorithms["Knuth"], gui=False, log_func=self.log_message
+            self, None, self.algorithms[Constants.DEFAULT_ALGORITHM], gui=False, log_func=self.log_message
         )
         self._running = False
         self._process = mp.Process(
             target=self.process_loop,
-            args=(in_queue, out_queue, error_queue),
+            args=(in_queue, out_queue, error_queue, export_queue),
             daemon=True,
         )
         self.name = self._process.name
@@ -108,7 +141,7 @@ class TestSuiteConsumer(ElevatorManager):
     def start(self):
         self._process.start()
 
-    def process_loop(self, in_queue, out_queue, error_queue):
+    def process_loop(self, in_queue, out_queue, error_queue, export_queue):
         try:
             while True:
                 n_iter, settings = in_queue.get()
@@ -125,7 +158,13 @@ class TestSuiteConsumer(ElevatorManager):
 
                 for _ in range(settings.num_elevators):
                     self.add_elevator(random.randint(1, settings.floors))
-                self.algorithm.loads.extend(settings.loads)
+                for load in settings.loads:
+                    self.algorithm.add_load(load)
+
+                # save
+                if export_queue is not None:
+                    name = f"{settings.name}_{n_iter}"
+                    export_queue.put((name, copy.deepcopy(self.algorithm)))
 
                 self.active = True
                 self.log_message(
@@ -216,51 +255,88 @@ class TestSuiteConsumer(ElevatorManager):
         return obj
 
 
-class ErrorProcess(mp.Process):
+class BackgroundProcess(mp.Process):
     def __init__(
         self,
         in_queue,
         out_queue,
         error_queue,
+        export_queue,
         consumers: List[TestSuiteConsumer],
         close_event,
     ):
         super().__init__(
             target=self.process_loop,
-            args=(in_queue, out_queue, error_queue, consumers, close_event),
+            args=(in_queue, out_queue, error_queue, export_queue, consumers, close_event),
         )
 
-    def process_loop(self, in_queue, out_queue, error_queue, consumers, close_event):
+    def process_loop(self, in_queue, out_queue, error_queue, export_queue, consumers, close_event):
         while close_event.is_set() is False:
-            try:
-                name, e = error_queue.get(timeout=1)
-            except queue.Empty:
-                continue
+            while close_event.is_set() is False:
+                try:
+                    name, e = error_queue.get(timeout=0.2)
+                except queue.Empty:
+                    break
+                else:
+                    del consumers[name]
+                    consumer = TestSuiteConsumer(in_queue, out_queue, error_queue, export_queue)
+                    consumer.start()
+                    consumers[consumer.name] = consumer
 
-            del consumers[name]
-            consumer = TestSuiteConsumer(in_queue, out_queue, error_queue)
-            consumer.start()
-            consumers[consumer.name] = consumer
+                    print(f"[E_HANDLER] INFO {name} died, restarting as {consumer.name}")
+                    print(e.formatted_exception)
+                    error_queue.task_done()
 
-            print(f"[E_HANDLER] INFO {name} died, restarting as {consumer.name}")
-            print(e.formatted_exception)
-            error_queue.task_done()
+            if export_queue is not None:
+                while close_event.is_set() is False:
+                    try:
+                        name, algo = export_queue.get(timeout=0.2)
+                    except queue.Empty:
+                        break
+                    else:
+                        dt = datetime.now().isoformat().replace(":", "-")
+                        fn = f"{dt}_{name}.esi"
+                        save_algorithm(algo, fn)
+                        print(f"[F_HANDLER] INFO {name} exported and saved")
+                        export_queue.task_done()
 
 
 class TestSuite:
-    def __init__(self, tests, max_processes=None, *, include_raw_stats=True):
+    def __init__(self, tests, **options):
+        """Creates a test suite
+
+        tests: List[TestSettings]
+            Various tests to be run
+        **export_artefacts: bool
+            Default: True
+            Whether to export the artefacts of the simulation
+        **max_processes: int
+            Default: None
+            Maximum number of processes to use
+        **include_raw_stats: bool
+            Default: True
+            Whether to include the raw stats in the output
+        """
         self.tests: List[TestSettings] = tests
         self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
         self.out_queue: Queue[
             Tuple[Tuple[int, TestSettings], SimulationStats]
         ] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
+
+        if options.pop("export_artefacts", True) is True:
+            self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
+        else:
+            self.export_queue = None
+
         self.close_event = mp.Event()
-        self.include_raw_stats = include_raw_stats
+        self.include_raw_stats = options.pop("include_raw_stats", True)
 
         hard_max_processes = min(
             mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests)
         )
+
+        max_processes = options.pop("max_processes", None)
         if max_processes is None:
             self.max_processes = hard_max_processes
         else:
@@ -270,7 +346,7 @@ class TestSuite:
             for i in range(test.total_iterations):
                 self.in_queue.put((i + 1, test))
 
-        self.results: dict[TestSettings, TestStats] = {}
+        self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
 
         self.consumers = {}
         self.error_process = None
@@ -279,17 +355,18 @@ class TestSuite:
         """Starts the Test Suite"""
         for _ in range(self.max_processes):
             consumer = TestSuiteConsumer(
-                self.in_queue, self.out_queue, self.error_queue
+                self.in_queue, self.out_queue, self.error_queue, self.export_queue
             )
             self.consumers[consumer.name] = consumer
 
         for p in self.consumers.values():
             p.start()
 
-        self.error_process = ErrorProcess(
+        self.error_process = BackgroundProcess(
             self.in_queue,
             self.out_queue,
             self.error_queue,
+            self.export_queue,
             self.consumers,
             self.close_event,
         )
@@ -322,7 +399,7 @@ class TestSuite:
         fn = f"results/{dt}.json"
 
         data = [
-            {**settings.to_dict(), "stats": stats.to_dict(self.include_raw_stats)}
+            {**settings.to_dict(len(stats)), "stats": stats.to_dict(self.include_raw_stats)}
             for settings, stats in self.results.values()
         ]
         with open(fn, "w") as f:
@@ -332,6 +409,9 @@ class TestSuite:
 
     def close(self):
         self.save_results()
+        if self.export_queue is not None:
+            self.export_queue.join()
+
         self.close_event.set()
         self.error_process.join()
 

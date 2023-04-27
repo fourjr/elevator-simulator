@@ -2,7 +2,7 @@ from models import Direction, ElevatorAlgorithm, Elevator, Load
 from typing import List
 
 
-class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
+class ElevatorAlgorithmSCAN(ElevatorAlgorithm):
     """The standard elevator algorithm"""
 
     def __init__(self, *args, **kwargs) -> None:
@@ -69,27 +69,22 @@ class ElevatorAlgorithmKnuth(ElevatorAlgorithm):
 
         return False
 
-    def on_load_removed(self, load, elevator):
-        if elevator.load == 0:
-            # No more loads
-            self.current_direction[elevator.id] = None
-
-        return super().on_load_removed(load, elevator)
-
-    def on_load_added(self, load, elevator):
+    def on_load_load(self, load, elevator):
         if len(elevator.loads) == 1:
             # First load, reset destination
             elevator._destination = self.get_new_destination(elevator)
 
-        return super().on_load_added(load, elevator)
+        return super().on_load_load(load, elevator)
 
-    def post_tick(self):
-        for elevator in self.elevators:
-            if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
-                del self.attended_to[elevator.id]
+    def on_elevator_move(self, elevator: Elevator):
+        if elevator.current_floor == self.floors:
+            self.current_direction[elevator.id] = Direction.DOWN
+        elif elevator.current_floor == 0:
+            self.current_direction[elevator.id] = Direction.UP
 
-        return super().post_tick()
+        if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
+            del self.attended_to[elevator.id]
 
 
-__name__ = "Knuth"
-__algorithm__ = ElevatorAlgorithmKnuth
+__name__ = "SCAN"
+__algorithm__ = ElevatorAlgorithmSCAN
