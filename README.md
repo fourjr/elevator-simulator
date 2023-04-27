@@ -54,22 +54,22 @@ __algorithm__ = MyAlgorithm
 There are various events exposed for subclasses but the only required function is `get_new_destination`. Exposed events are listed below.
 
 ```python
-def pre_tick(self)
-def post_tick(self)
-def on_load_load(self, load, elevator)
-def on_load_unload(self, load, elevator)
-def on_elevator_move(self, elevator)
-def on_elevator_added(self, elevator)
-def on_elevator_removed(self, elevator)
-def on_floors_changed(self)
-def on_load_added(self, load)
-def on_load_removed(self, load)
+def pre_tick(self):
+def post_tick(self):
+def on_load_load(self, load, elevator):
+def on_load_unload(self, load, elevator):
+def on_elevator_move(self, elevator):
+def on_elevator_added(self, elevator):
+def on_elevator_removed(self, elevator):
+def on_floors_changed(self):
+def on_load_added(self, load):
+def on_load_removed(self, load):
 ```
 
 There are also 2 check functions that should return a boolean. If the check fails, the load will not be loaded/unloaded.
 ```python
-def pre_load_check(self, load, elevator) -> bool
-def pre_unload_check(self, load, elevator) -> bool
+def pre_load_check(self, load, elevator) -> bool:
+def pre_unload_check(self, load, elevator) -> bool:
 ```
 
 ### The Cycle
