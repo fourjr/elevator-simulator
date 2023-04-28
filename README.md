@@ -112,12 +112,12 @@ Examples: [test_json.py](/test_json.py) ([test.example.json](/test.example.json)
 The test suite runs using a multiprocess approach as per the following explanation:
 | Process | Description |
 | --- | --- |
-| Main Process | Manages all threads and does final saving of results |
-| Background Process | Handles errors raised by test threads and exports artefacts |
-| Test Process | Runs the test and raises errors to the background thread, reports back to main thread |
+| Main Process | Manages all processes and does final saving of results |
+| Background Process | Handles errors raised by test processes and exports artefacts |
+| `N` Test Processes | Runs the test and raises errors to the background process, reports back to main process |
 
-The number of processes are determined by the following formula:
-- <= the given `max_processes` argument
+The number of test processes (`N`) are determined by the following formula:
+- <= the given `max_processes` kwarg
 - <= (CPU Count - 1)
 - <= Number of total iterations
 
