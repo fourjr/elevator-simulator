@@ -1,5 +1,7 @@
-from models import Direction, ElevatorAlgorithm, Elevator, Load
 from typing import List
+
+from constants import Direction
+from models import ElevatorAlgorithm, Elevator, Load
 
 
 class ElevatorAlgorithmSCAN(ElevatorAlgorithm):

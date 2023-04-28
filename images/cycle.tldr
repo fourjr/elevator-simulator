@@ -71,7 +71,7 @@
       "isMobileMode": false,
       "isSnapMode": false,
       "lastUpdatedPageId": "page:Hyttx6HZeWB94kTmvlj-N",
-      "lastUsedTabId": "instance:f-vxafCrg5BICFECuNaN5",
+      "lastUsedTabId": "instance:kdU0Pv75DGBYxwLMEOupm",
       "id": "user_document:02TSIf_LNUm4KFiHosLXq",
       "userId": "user:0fR_A-xiFRbXN_UoIr-3a",
       "typeName": "user_document"
@@ -128,18 +128,18 @@
       "typeName": "user"
     },
     {
-      "lastUsedInstanceId": "instance:f-vxafCrg5BICFECuNaN5",
-      "lastActivityTimestamp": 1682664125880,
+      "lastUsedInstanceId": "instance:kdU0Pv75DGBYxwLMEOupm",
+      "lastActivityTimestamp": 1682688624387,
       "cursor": {
-        "x": 947.0811449926941,
-        "y": 288.01591823053786,
-        "z": 0
+        "x": 326.3049812885232,
+        "y": -462.3919210315048,
+        "z": 1
       },
       "viewportPageBounds": {
-        "x": 221.55103262482106,
-        "y": -194.94109606164676,
-        "w": 1094.5377457332627,
-        "h": 865.6420730962852
+        "x": -592.6129393605975,
+        "y": -829.223658970775,
+        "w": 2574.2508067416256,
+        "h": 1535.2652220452605
       },
       "color": "#39B178",
       "id": "user_presence:hkp40zmLjG4QAa3dJU_n6",
@@ -415,6 +415,66 @@
       "typeName": "instance_page_state"
     },
     {
+      "followingUserId": null,
+      "propsForNextShape": {
+        "opacity": "1",
+        "color": "blue",
+        "labelColor": "black",
+        "dash": "draw",
+        "fill": "solid",
+        "size": "s",
+        "icon": "file",
+        "font": "draw",
+        "align": "start",
+        "geo": "rectangle",
+        "arrowheadStart": "none",
+        "arrowheadEnd": "arrow",
+        "spline": "line"
+      },
+      "brush": null,
+      "scribble": null,
+      "cursor": {
+        "type": "default",
+        "color": "black",
+        "rotation": 0
+      },
+      "isFocusMode": false,
+      "exportBackground": true,
+      "isDebugMode": false,
+      "isToolLocked": false,
+      "screenBounds": {
+        "x": 0,
+        "y": 0,
+        "w": 1543.6800537109375,
+        "h": 920.6400146484375
+      },
+      "id": "instance:kdU0Pv75DGBYxwLMEOupm",
+      "userId": "user:0fR_A-xiFRbXN_UoIr-3a",
+      "currentPageId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "typeName": "instance"
+    },
+    {
+      "x": 592.6129393605975,
+      "y": 829.223658970775,
+      "z": 0.5996618704239081,
+      "id": "camera:2XjAFqxOCHj5A1iQRIx0d",
+      "typeName": "camera"
+    },
+    {
+      "editingId": null,
+      "croppingId": null,
+      "selectedIds": [],
+      "hoveredId": null,
+      "erasingIds": [],
+      "hintingIds": [],
+      "focusLayerId": null,
+      "id": "instance_page_state:Nixl2WH-Lb-vJUmnoIHXt",
+      "pageId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "instanceId": "instance:kdU0Pv75DGBYxwLMEOupm",
+      "cameraId": "camera:2XjAFqxOCHj5A1iQRIx0d",
+      "typeName": "instance_page_state"
+    },
+    {
       "x": 431.3491150101896,
       "y": 89.49777209726469,
       "rotation": 0,
@@ -443,13 +503,13 @@
     },
     {
       "x": 440,
-      "y": 1190,
+      "y": 1260,
       "rotation": 0,
       "isLocked": false,
       "type": "geo",
       "props": {
-        "w": 161.09206738983482,
-        "h": 68.87760573499799,
+        "w": 160,
+        "h": 56.28500175476074,
         "geo": "rectangle",
         "color": "yellow",
         "labelColor": "black",
@@ -1033,6 +1093,114 @@
       "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
       "index": "aO",
       "id": "shape:xlAGyNkyzlf_j1xNLUxYC",
+      "typeName": "shape"
+    },
+    {
+      "x": 150,
+      "y": -90,
+      "rotation": 0,
+      "isLocked": false,
+      "id": "shape:dTBOFN8Ge2oOlZXNTMogt",
+      "type": "geo",
+      "props": {
+        "w": 126.0283151225358,
+        "h": 56.28500175476074,
+        "geo": "rectangle",
+        "color": "grey",
+        "labelColor": "black",
+        "fill": "solid",
+        "dash": "draw",
+        "size": "s",
+        "opacity": "0.75",
+        "font": "draw",
+        "text": "Manager",
+        "align": "start",
+        "growY": 0,
+        "url": ""
+      },
+      "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "index": "aP",
+      "typeName": "shape"
+    },
+    {
+      "x": 170,
+      "y": 1330,
+      "rotation": 0,
+      "isLocked": false,
+      "id": "shape:2CKDnxjpbU2BqSDugZ09H",
+      "type": "geo",
+      "props": {
+        "w": 203.41368832562011,
+        "h": 56.28500175476074,
+        "geo": "rectangle",
+        "color": "blue",
+        "labelColor": "black",
+        "fill": "solid",
+        "dash": "draw",
+        "size": "s",
+        "opacity": "1",
+        "font": "draw",
+        "text": "gui - send_event",
+        "align": "start",
+        "growY": 0,
+        "url": ""
+      },
+      "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "index": "aQ",
+      "typeName": "shape"
+    },
+    {
+      "x": 180,
+      "y": 1410,
+      "rotation": 0,
+      "isLocked": false,
+      "id": "shape:H8qugxRBu5eMqcexKu1M9",
+      "type": "geo",
+      "props": {
+        "w": 203.41368832562011,
+        "h": 56.28500175476074,
+        "geo": "rectangle",
+        "color": "yellow",
+        "labelColor": "black",
+        "fill": "solid",
+        "dash": "draw",
+        "size": "s",
+        "opacity": "1",
+        "font": "draw",
+        "text": "on_tick",
+        "align": "start",
+        "growY": 0,
+        "url": ""
+      },
+      "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "index": "aR",
+      "typeName": "shape"
+    },
+    {
+      "x": 440,
+      "y": 1180,
+      "rotation": 0,
+      "isLocked": false,
+      "id": "shape:CuGRjF6hhPZ-jr3Tdevy0",
+      "type": "geo",
+      "props": {
+        "w": 160,
+        "h": 56.28500175476074,
+        "geo": "rectangle",
+        "color": "light-blue",
+        "labelColor": "black",
+        "fill": "solid",
+        "dash": "draw",
+        "size": "s",
+        "opacity": "1",
+        "font": "draw",
+        "text": "tick: +1",
+        "align": "start",
+        "growY": 0,
+        "url": ""
+      },
+      "parentId": "page:Hyttx6HZeWB94kTmvlj-N",
+      "index": "aS",
       "typeName": "shape"
     }
   ]

@@ -20,8 +20,8 @@ Both the GUI and the Test Suite control the same managers and algorithms in the 
 | --- | --- |
 | [app.py](/app.py) | GUI handler |
 | [suite.py](/suite.py) | Test suite |
+| [models](/models) | Data models for custom classes |
 | [constants.py](/constants.py) | Various enums and constants |
-| [models.py](/models.py) | Data models for custom classes |
 | [utils.py](/utils.py) | Utility functions |
 | [errors.py](/errors.py) | Custom errors |
 

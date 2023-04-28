@@ -1,4 +1,5 @@
-from models import Direction, ElevatorAlgorithm, Elevator, Load
+from constants import Direction
+from models import ElevatorAlgorithm, Elevator
 
 
 class ElevatorAlgorithmRolling(ElevatorAlgorithm):

@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Generator, Tuple
 
 from errors import InvalidAlgorithm
-from models import ElevatorAlgorithm
+from models.algorithm import ElevatorAlgorithm
 
 
 def load_algorithms() -> dict[str, ElevatorAlgorithm]:

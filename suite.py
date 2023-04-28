@@ -201,13 +201,13 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
                     # continue with next simulation
                     self.log_message(
                         LogLevel.WARNING,
-                        f'{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {self.current_tick=}',
+                        f'{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                         LogOrigin.TEST,
                     )
                 else:
                     self.log_message(
                         LogLevel.INFO,
-                        f'{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}',
+                        f'{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                         LogOrigin.TEST,
                     )
                     self.out_queue.put(((n_iter, settings), self.algorithm.stats))
@@ -227,13 +227,13 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
                 n_iter, settings = self.current_simulation
                 self.log_message(
                     LogLevel.ERROR,
-                    f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}',
+                    f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                     LogOrigin.TEST,
                 )
             else:
                 self.log_message(
                     LogLevel.ERROR,
-                    f'{self.name} ERROR SIMULATION: {self.current_tick=}',
+                    f'{self.name} ERROR SIMULATION: {self.algorithm.tick_count=}',
                     LogOrigin.TEST,
                 )
 
@@ -244,7 +244,7 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
             self.end_simulation()
 
         # frozen loads
-        if self.current_tick - self.latest_load_move > 500:
+        if self.algorithm.tick_count - self.latest_load_move > 500:
             self.end_simulation()
             n_iter, settings = self.current_simulation
             self.log_message(
@@ -255,7 +255,7 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
             raise TestTimeout(self.name, n_iter, settings)
 
     def on_load_move(self, _):
-        self.latest_load_move = self.current_tick
+        self.latest_load_move = self.algorithm.tick_count
 
     def start_simulation(self):
         self._running = True

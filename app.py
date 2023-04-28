@@ -13,9 +13,9 @@ import wx.lib.scrolledpanel as scrolled
 import wx.lib.newevent as wxne
 import wx.aui as aui
 
-from constants import ID, Unicode, Constants
+from constants import ID, Unicode, Constants, LogLevel
 from errors import BadArgument
-from models import LogLevel, LogMessage, ElevatorManagerThread
+from models import LogMessage, ElevatorManagerThread
 from utils import load_algorithms, save_algorithm
 
 
@@ -88,7 +88,9 @@ class BaseWindow(wx.Frame):
         self.Destroy()
 
     def WriteToLog(self, level: LogLevel, message):
-        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(LogMessage(level, message, self.manager.current_tick))
+        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(
+            LogMessage(level, message, self.manager.algorithm.tick_count)
+        )
 
     @property
     def active(self):
