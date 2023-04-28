@@ -86,5 +86,5 @@ class ElevatorAlgorithmSCAN(ElevatorAlgorithm):
             del self.attended_to[elevator.id]
 
 
-__name__ = "SCAN"
+__name__ = 'SCAN'
 __algorithm__ = ElevatorAlgorithmSCAN

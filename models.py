@@ -43,14 +43,14 @@ class GeneratedStats:
         return max(self.values)
 
     def __str__(self):
-        return f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
+        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
 
     def to_dict(self):
         return {
-            "mean": self.mean,
-            "median": self.median,
-            "minimum": self.minimum,
-            "maximum": self.maximum,
+            'mean': self.mean,
+            'median': self.median,
+            'minimum': self.minimum,
+            'maximum': self.maximum,
         }
 
 
@@ -104,9 +104,9 @@ class CombinedStats:
         return statistics.mean([stat.maximum for stat in self.stats])
 
     def __str__(self):
-        return f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
+        return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
 
-    def __or__(self, other: "GeneratedStats") -> "CombinedStats":
+    def __or__(self, other: 'GeneratedStats') -> 'CombinedStats':
         """Combines another GeneratedStats object using the | operator"""
         if not isinstance(other, GeneratedStats):
             return super().__or__(other)
@@ -118,10 +118,10 @@ class CombinedStats:
 
     def to_dict(self):
         return {
-            "mean": self.mean,
-            "median": self.median,
-            "minimum": self.minimum,
-            "maximum": self.maximum,
+            'mean': self.mean,
+            'median': self.median,
+            'minimum': self.minimum,
+            'maximum': self.maximum,
         }
 
 
@@ -134,10 +134,10 @@ class SimulationStats:
     occupancy: GeneratedStats
 
     def __str__(self) -> str:
-        fmt_text = f"Tick: {self.ticks}\nAlgorithm: {self.algorithm_name}\n\n(MIN/MEAN/MED/MAX)\n\n"
-        fmt_text += f"Wait Time: {self.wait_time}\n"
-        fmt_text += f"Time in Lift: {self.time_in_lift}\n"
-        fmt_text += f"Occupancy: {self.occupancy}"
+        fmt_text = f'Tick: {self.ticks}\nAlgorithm: {self.algorithm_name}\n\n(MIN/MEAN/MED/MAX)\n\n'
+        fmt_text += f'Wait Time: {self.wait_time}\n'
+        fmt_text += f'Time in Lift: {self.time_in_lift}\n'
+        fmt_text += f'Occupancy: {self.occupancy}'
         return fmt_text
 
 
@@ -184,7 +184,7 @@ class Load:
     destination_floor: int
     weight: int
     current_floor: int = field(init=False, default=None)
-    elevator: "Elevator" = field(init=False, default=None, repr=False)
+    elevator: 'Elevator' = field(init=False, default=None, repr=False)
     tick_created: int = field(init=False, default=0, repr=False)
     enter_lift_time: int = field(init=False, default=None, repr=False)
 
@@ -192,7 +192,7 @@ class Load:
         self.current_floor = self.initial_floor
 
     def __repr__(self) -> str:
-        return f"Load(id={self.id}, initial_floor={self.initial_floor}, destination_floor={self.destination_floor}, weight={self.weight} current_floor={self.current_floor} elevator={bool(self.elevator)})"
+        return f'Load(id={self.id}, initial_floor={self.initial_floor}, destination_floor={self.destination_floor}, weight={self.weight} current_floor={self.current_floor} elevator={bool(self.elevator)})'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Load):
@@ -250,7 +250,7 @@ class ElevatorAlgorithm:
         elevator: Elevator
             The elevator to get a new destination for
         """
-        raise NotImplementedError("get_new_destination must be implemented in a subclass")
+        raise NotImplementedError('get_new_destination must be implemented in a subclass')
 
     def pre_load_check(self, load, elevator):
         """Checks if a load is allowed to enter the elevator
@@ -389,7 +389,7 @@ class ElevatorAlgorithm:
                 self.elevators.remove(elevator)
                 self.on_elevator_removed(elevator_id)
                 return
-        raise BadArgument(f"No elevator with id {elevator_id}")
+        raise BadArgument(f'No elevator with id {elevator_id}')
 
     def add_passenger(self, initial, destination):
         """Adds a passenger
@@ -418,13 +418,13 @@ class ElevatorAlgorithm:
                         if not self.pre_load_check(load, elevator):
                             self.manager.WriteToLog(
                                 LogLevel.DEBUG,
-                                f"Load {load.id} failed preload for elevator {elevator.id}",
+                                f'Load {load.id} failed preload for elevator {elevator.id}',
                             )
                             continue
 
                         self.manager.WriteToLog(
                             LogLevel.INFO,
-                            f"Load {load.id} added to elevator {elevator.id}",
+                            f'Load {load.id} added to elevator {elevator.id}',
                         )
                         loads_to_add.append(load)
                         load.elevator = elevator
@@ -438,8 +438,8 @@ class ElevatorAlgorithm:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        if "manager" in state:
-            del state["manager"]
+        if 'manager' in state:
+            del state['manager']
         return state
 
 
@@ -491,7 +491,7 @@ class Elevator:
         """
         self.manager.WriteToLog(
             LogLevel.TRACE,
-            f"Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}",
+            f'Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}',
         )
         self._current_floor += increment
 
@@ -504,7 +504,7 @@ class Elevator:
             if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(
                 load, self
             ):
-                self.manager.WriteToLog(LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}")
+                self.manager.WriteToLog(LogLevel.INFO, f'{load.id} unloaded from elevator {self.id}')
                 self.manager.algorithm.time_in_lift.append(self.manager.current_tick - load.enter_lift_tick + 1)
                 load.elevator = None
                 to_remove.append(load)
@@ -550,10 +550,10 @@ class Elevator:
         self.manager.algorithm.on_load_load(load, self)
 
     def __repr__(self) -> str:
-        if getattr(self, "manager", None):
-            return f"<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>"
+        if getattr(self, 'manager', None):
+            return f'<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>'
         else:
-            return f"<Elevator* {self.id} load={self.load // 60} current_floor={self._current_floor}>"
+            return f'<Elevator* {self.id} load={self.load // 60} current_floor={self._current_floor}>'
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Elevator):
@@ -562,8 +562,8 @@ class Elevator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        if "manager" in state:
-            del state["manager"]
+        if 'manager' in state:
+            del state['manager']
         return state
 
 

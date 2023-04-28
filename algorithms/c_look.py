@@ -14,5 +14,5 @@ class ElevatorAlgorithmC_LOOK(ElevatorAlgorithmLOOK):
         return Direction.UP
 
 
-__name__ = "C-LOOK"
+__name__ = 'C-LOOK'
 __algorithm__ = ElevatorAlgorithmC_LOOK

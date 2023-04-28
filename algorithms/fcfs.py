@@ -56,5 +56,5 @@ class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
         self.pending_loads.append(load)
 
 
-__name__ = "FCFS"
+__name__ = 'FCFS'
 __algorithm__ = ElevatorAlgorithmFCFS

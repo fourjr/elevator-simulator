@@ -17,5 +17,5 @@ class ElevatorAlgorithmLOOK(ElevatorAlgorithmSCAN):
             del self.attended_to[elevator.id]
 
 
-__name__ = "LOOK"
+__name__ = 'LOOK'
 __algorithm__ = ElevatorAlgorithmLOOK

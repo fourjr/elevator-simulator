@@ -14,5 +14,5 @@ class ElevatorAlgorithmC_SCAN(ElevatorAlgorithmSCAN):
         return Direction.UP
 
 
-__name__ = "C-SCAN"
+__name__ = 'C-SCAN'
 __algorithm__ = ElevatorAlgorithmC_SCAN

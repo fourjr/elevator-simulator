@@ -20,16 +20,16 @@ def load_algorithms() -> dict[str, ElevatorAlgorithm]:
         A dictionary mapping of { algorithm_name: algorithm }
     """
     algorithms = {}
-    for i in glob.iglob("algorithms/*.py"):
-        module = importlib.import_module(i.replace(os.path.sep, ".")[:-3])
-        if not hasattr(module, "__algorithm__"):
-            raise InvalidAlgorithm(f"Algorithm in {module} is not defined")
-        if not hasattr(module, "__name__"):
-            raise InvalidAlgorithm(f"Name in {module} is not defined")
+    for i in glob.iglob('algorithms/*.py'):
+        module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
+        if not hasattr(module, '__algorithm__'):
+            raise InvalidAlgorithm(f'Algorithm in {module} is not defined')
+        if not hasattr(module, '__name__'):
+            raise InvalidAlgorithm(f'Name in {module} is not defined')
 
         algorithm = module.__algorithm__
         if not issubclass(algorithm, ElevatorAlgorithm):
-            raise InvalidAlgorithm(f"Algorithm in {module} is not a subclass of ElevatorAlgorithm")
+            raise InvalidAlgorithm(f'Algorithm in {module} is not a subclass of ElevatorAlgorithm')
 
         algorithm.name = module.__name__
         algorithms[algorithm.name] = algorithm
@@ -46,19 +46,19 @@ def save_algorithm(algorithm, fn=None) -> str:
 
     Returns: file name
     """
-    dt = datetime.now().isoformat().replace(":", "-")
+    dt = datetime.now().isoformat().replace(':', '-')
     if fn is None:
-        fn = f"{dt}_{algorithm.name}.esi"
+        fn = f'{dt}_{algorithm.name}.esi'
 
-    if not os.path.isdir("exports"):
-        os.mkdir("exports")
+    if not os.path.isdir('exports'):
+        os.mkdir('exports')
 
-    fp = os.path.join("exports", fn)
-    with open(fp, "wb") as f:
+    fp = os.path.join('exports', fn)
+    with open(fp, 'wb') as f:
         f.write(
-            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode("utf8")
+            f'fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00'.encode('utf8')
             + gzip.compress(pickle.dumps(algorithm))
-            + f"\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode("utf8")
+            + f'\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator'.encode('utf8')
         )
 
     return fn
@@ -79,4 +79,4 @@ def jq_join_timeout(jq, timeout) -> None:
     with jq._cond:
         if not jq._unfinished_tasks._semlock._is_zero():
             if not jq._cond.wait(timeout=timeout):
-                raise TimeoutError("jq_join_timeout timed out")
+                raise TimeoutError('jq_join_timeout timed out')

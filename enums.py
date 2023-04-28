@@ -36,12 +36,12 @@ class LogOrigin(IntEnum):
 
 
 class Unicode:
-    UP = "\u2191"
-    DOWN = "\u2193"
-    ARROW = "\u2192"
+    UP = '\u2191'
+    DOWN = '\u2193'
+    ARROW = '\u2192'
 
 
 class Constants:
-    DEFAULT_ALGORITHM = "SCAN"
+    DEFAULT_ALGORITHM = 'SCAN'
     DEFAULT_FLOORS = 10
     MAX_PROCESSES = 3

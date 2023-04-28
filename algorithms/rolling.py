@@ -24,5 +24,5 @@ class ElevatorAlgorithmRolling(ElevatorAlgorithm):
             return 1
 
 
-__name__ = "Rolling"
+__name__ = 'Rolling'
 __algorithm__ = ElevatorAlgorithmRolling

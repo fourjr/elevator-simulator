@@ -6,7 +6,7 @@ class FullElevator(ElevatorError):
     """Raised when an elevator is full and unable to add new load"""
 
     def __init__(self, elevator_id) -> None:
-        super().__init__(f"{elevator_id} is full, unable to add new load")
+        super().__init__(f'{elevator_id} is full, unable to add new load')
         self.elevator_id = elevator_id
 
 

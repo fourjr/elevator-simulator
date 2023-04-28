@@ -19,5 +19,5 @@ class ElevatorAlgorithmScatter(ElevatorAlgorithm):
             return load.destination_floor
 
 
-__name__ = "Scatter"
+__name__ = 'Scatter'
 __algorithm__ = ElevatorAlgorithmScatter

@@ -79,5 +79,5 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
             del self.attended_to[elevator.id]
 
 
-__name__ = "NStepSCAN"
+__name__ = 'NStepSCAN'
 __algorithm__ = ElevatorAlgorithmNStepSCAN
