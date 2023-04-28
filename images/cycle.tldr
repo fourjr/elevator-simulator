@@ -129,15 +129,15 @@
     },
     {
       "lastUsedInstanceId": "instance:kdU0Pv75DGBYxwLMEOupm",
-      "lastActivityTimestamp": 1682688624387,
+      "lastActivityTimestamp": 1682689704615,
       "cursor": {
-        "x": 326.3049812885232,
-        "y": -462.3919210315048,
-        "z": 1
+        "x": 1379.6987100983863,
+        "y": 241.40471730832633,
+        "z": 0
       },
       "viewportPageBounds": {
         "x": -592.6129393605975,
-        "y": -829.223658970775,
+        "y": -203.87124205804366,
         "w": 2574.2508067416256,
         "h": 1535.2652220452605
       },
@@ -455,7 +455,7 @@
     },
     {
       "x": 592.6129393605975,
-      "y": 829.223658970775,
+      "y": 203.87124205804366,
       "z": 0.5996618704239081,
       "id": "camera:2XjAFqxOCHj5A1iQRIx0d",
       "typeName": "camera"
@@ -464,7 +464,7 @@
       "editingId": null,
       "croppingId": null,
       "selectedIds": [],
-      "hoveredId": null,
+      "hoveredId": "shape:-X1jScLlOmrFDlrDztsuG",
       "erasingIds": [],
       "hintingIds": [],
       "focusLayerId": null,
