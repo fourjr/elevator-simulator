@@ -6,7 +6,6 @@ import multiprocessing as mp
 import random
 from datetime import datetime
 from dataclasses import dataclass, field
-import time
 import traceback
 from typing import List, Tuple
 from multiprocessing import Queue, JoinableQueue
@@ -341,16 +340,15 @@ class TestSuite:
         """
         self.tests: List[TestSettings] = tests
         self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
-        self.out_queue: Queue[
-            Tuple[Tuple[int, TestSettings], SimulationStats]
-        ] = Queue()
+        self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats]] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
-
         self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
-        self.export_artefacts = options.pop("export_artefacts", True)
 
         self.close_event = mp.Event()
+        self.export_artefacts = options.pop("export_artefacts", True)
         self.include_raw_stats = options.pop("include_raw_stats", True)
+
+        self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
 
         hard_max_processes = min(
             mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests)
@@ -362,11 +360,7 @@ class TestSuite:
         else:
             self.max_processes = min(max_processes, hard_max_processes)
 
-        for test in self.tests:
-            for i in range(test.total_iterations):
-                self.in_queue.put((i + 1, test))
-
-        self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
+        self.init_tests()
 
         self.consumers = {}
         self.background_process = BackgroundProcess(
@@ -377,6 +371,12 @@ class TestSuite:
             self.consumers,
             self.close_event,
         )
+
+    def init_tests(self):
+        """Initialises the tests and prepare for execution"""
+        for test in self.tests:
+            for i in range(test.total_iterations):
+                self.in_queue.put((i + 1, test))
 
     def start(self):
         """Starts the Test Suite"""

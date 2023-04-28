@@ -4,13 +4,21 @@ import importlib
 import os
 import pickle
 from datetime import datetime
-from time import time
+from typing import Generator, Tuple
 
 from errors import InvalidAlgorithm
 from models import ElevatorAlgorithm
 
 
 def load_algorithms() -> dict[str, ElevatorAlgorithm]:
+    """Loads all algorithms from the algorithms folder
+
+
+    Raises InvalidAlgorithm if there is a problem with loading the algorithm
+
+    Returns: dict[str, ElevatorAlgorithm]
+        A dictionary mapping of { algorithm_name: algorithm }
+    """
     algorithms = {}
     for i in glob.iglob("algorithms/*.py"):
         module = importlib.import_module(i.replace(os.path.sep, ".")[:-3])
@@ -31,7 +39,15 @@ def load_algorithms() -> dict[str, ElevatorAlgorithm]:
     return algorithms
 
 
-def save_algorithm(algorithm, fn=None):
+def save_algorithm(algorithm, fn=None) -> str:
+    """Exports the algorithm
+
+    fn: Optional[str]
+        File name to save as
+        Default: {datetime}_{algorithm_name}.esi
+
+    Returns: file name
+    """
     dt = datetime.now().isoformat().replace(":", "-")
     if fn is None:
         fn = f"{dt}_{algorithm.name}.esi"
@@ -53,13 +69,19 @@ def save_algorithm(algorithm, fn=None):
 
     return fn
 
-def split_array(a, n):
+
+def split_array(a, n) -> Generator[Tuple[int]]:
     """https://stackoverflow.com/a/2135920/8129786"""
     k, m = divmod(len(a), n)
     return (a[(i % len(a))*k+min(i % len(a), m):(i+1)*k+min((i % len(a))+1, m)] for i in range(n))
 
 
-def jq_join_timeout(jq, timeout):
+def jq_join_timeout(jq, timeout) -> None:
+    """Joins a JoinableQueue with a given timeout
+
+    Raises TimeoutError if the timeout is reached
+        and there are still unfinished tasks
+    """
     with jq._cond:
         if not jq._unfinished_tasks._semlock._is_zero():
             if not jq._cond.wait(timeout=timeout):
