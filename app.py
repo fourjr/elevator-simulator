@@ -40,9 +40,7 @@ class BaseWindow(wx.Frame):
         self.algorithms = load_algorithms()
         self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
 
-        self.manager = ElevatorManagerThread(
-            self, UpdateAlgorithm, self.current_algorithm
-        )
+        self.manager = ElevatorManagerThread(self, UpdateAlgorithm, self.current_algorithm)
         self.algorithm = copy.deepcopy(self.manager.algorithm)
 
         self.Bind(EVT_UPDATE_MANAGER, self.OnUpdateAlgorithm)
@@ -59,13 +57,9 @@ class BaseWindow(wx.Frame):
 
     def _import_simulation(self, fn):
         dt = datetime.now().isoformat()
-        skip_bytes = len(
-            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00"
-        )
+        skip_bytes = len(f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00")
         with open(fn, "rb") as f:
-            self.manager.algorithm = pickle.loads(
-                gzip.decompress(f.read()[skip_bytes:-skip_bytes])
-            )
+            self.manager.algorithm = pickle.loads(gzip.decompress(f.read()[skip_bytes:-skip_bytes]))
 
         self.manager.algorithm.manager = self.manager
 
@@ -94,9 +88,7 @@ class BaseWindow(wx.Frame):
         self.Destroy()
 
     def WriteToLog(self, level: LogLevel, message):
-        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(
-            LogMessage(level, message, self.manager.current_tick)
-        )
+        self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(LogMessage(level, message, self.manager.current_tick))
 
     @property
     def active(self):
@@ -114,17 +106,13 @@ class BaseWindow(wx.Frame):
 class ElevatorsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):
         self.window = window
-        super().__init__(
-            id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME
-        )
+        super().__init__(id=wx.ID_ANY, parent=window, style=wx.TAB_TRAVERSAL | wx.BORDER_THEME)
         self.texts = {}  # id : (floor_text, pax_text)
         self.InitUI()
         self.SetupScrolling(scroll_y=False)
 
     def _add_elevator(self, ev):
-        elevator_box = wx.StaticBox(
-            self, label=f"Elevator {ev.id}", pos=wx.Point(0, 0), size=wx.Size(130, 100)
-        )
+        elevator_box = wx.StaticBox(self, label=f"Elevator {ev.id}", pos=wx.Point(0, 0), size=wx.Size(130, 100))
         top_border, other_border = elevator_box.GetBordersForSizer()
 
         text_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -157,9 +145,8 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
                 updated = True
                 self.sz.SetCols(3)
                 self.sz.SetRows(2)
-            elif (
-                len(after.elevators) > 6
-                and math.ceil(len(before.elevators) / 3) != math.ceil(len(after.elevators) / 3)
+            elif len(after.elevators) > 6 and math.ceil(len(before.elevators) / 3) != math.ceil(
+                len(after.elevators) / 3
             ):
                 updated = True
                 self.sz.SetCols(math.ceil(len(after.elevators) / 3))
@@ -298,9 +285,7 @@ class ControlPanel(wx.Panel):
                 f"Passenger on floor {floor_i} to {floor_f} is not valid",
             )
             return
-        self.window.WriteToLog(
-            LogLevel.INFO, f"Add passenger on floor {floor_i} to {floor_f}"
-        )
+        self.window.WriteToLog(LogLevel.INFO, f"Add passenger on floor {floor_i} to {floor_f}")
         return self.window.manager.add_passenger(floor_i, floor_f)
 
     def _add_random_passengers(self, count):
@@ -310,14 +295,10 @@ class ControlPanel(wx.Panel):
 
     def set_algorithm(self, algorithm_name):
         if algorithm_name not in self.window.algorithms:
-            self.window.WriteToLog(
-                LogLevel.ERROR, f"Algorithm {algorithm_name} not found"
-            )
+            self.window.WriteToLog(LogLevel.ERROR, f"Algorithm {algorithm_name} not found")
             return
 
-        self.window.manager.set_algorithm(
-            self.window.algorithms[algorithm_name]
-        )
+        self.window.manager.set_algorithm(self.window.algorithms[algorithm_name])
         self.window.current_algorithm = self.window.algorithms[algorithm_name]
         self.window.WriteToLog(LogLevel.INFO, f"Set algorithm to {algorithm_name}")
 
@@ -331,12 +312,8 @@ class ControlPanel(wx.Panel):
 
     def toggle_play(self):
         self.window.active = not self.window.active
-        self.window.WriteToLog(
-            LogLevel.INFO, f"Setting play state to: {self.window.active}"
-        )
-        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel(
-            "Play" if not self.window.active else "Pause"
-        )
+        self.window.WriteToLog(LogLevel.INFO, f"Setting play state to: {self.window.active}")
+        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel("Play" if not self.window.active else "Pause")
 
     def import_simulation_fs(self):
         default_dir = os.getcwd()
@@ -344,14 +321,13 @@ class ControlPanel(wx.Panel):
             default_dir = os.path.join(default_dir, "exports")
 
         dlg = wx.FileDialog(
-            self, message="Choose a file",
+            self,
+            message="Choose a file",
             defaultDir=default_dir,
             defaultFile="",
             wildcard="*.esi",
-            style=wx.FD_OPEN |
-                  wx.FD_CHANGE_DIR | wx.FD_FILE_MUST_EXIST |
-                  wx.FD_PREVIEW
-            )
+            style=wx.FD_OPEN | wx.FD_CHANGE_DIR | wx.FD_FILE_MUST_EXIST | wx.FD_PREVIEW,
+        )
         if dlg.ShowModal() == wx.ID_OK:
             # This returns a Python list of files that were selected.
             paths = dlg.GetPaths()
@@ -363,7 +339,6 @@ class ControlPanel(wx.Panel):
             self.window.WriteToLog(LogLevel.INFO, f"Imported {fn}")
 
         dlg.Destroy()
-
 
     def export_simulation(self):
         fn = save_algorithm(self.window.manager.algorithm)
@@ -383,16 +358,12 @@ class ControlPanel(wx.Panel):
         elevator_sz.Add(wx.StaticText(panel, wx.ID_ANY, "Elevators"), 0)
 
         elevator_sz.AddSpacer(15)
-        ef_add_selection = wx.SpinCtrl(
-            panel, id=ID.SELECT_ELEVATOR_ADD, initial=1, min=1, max=self.window.floors
-        )
+        ef_add_selection = wx.SpinCtrl(panel, id=ID.SELECT_ELEVATOR_ADD, initial=1, min=1, max=self.window.floors)
         elevator_sz.Add(ef_add_selection, 1, wx.FIXED_MINSIZE)
         self.floors_selections.append(ef_add_selection)
 
         add_elevator_btn = wx.Button(panel, wx.ID_ANY, "Add")
-        add_elevator_btn.Bind(
-            wx.EVT_BUTTON, lambda _: self.add_elevator(ef_add_selection.GetValue())
-        )
+        add_elevator_btn.Bind(wx.EVT_BUTTON, lambda _: self.add_elevator(ef_add_selection.GetValue()))
         elevator_sz.Add(add_elevator_btn, 0, wx.FIXED_MINSIZE)
 
         elevator_sz.AddSpacer(15)
@@ -439,9 +410,7 @@ class ControlPanel(wx.Panel):
         add_passenger_btn = wx.Button(panel, wx.ID_ANY, "Add")
         add_passenger_btn.Bind(
             wx.EVT_BUTTON,
-            lambda _: self.add_passenger(
-                pfi_selection.GetValue(), pff_selection.GetValue()
-            ),
+            lambda _: self.add_passenger(pfi_selection.GetValue(), pff_selection.GetValue()),
         )
         passenger_sz.Add(add_passenger_btn, 0, wx.FIXED_MINSIZE)
         passenger_sz.AddSpacer(20)
@@ -470,9 +439,7 @@ class ControlPanel(wx.Panel):
 
         algo_selection.Bind(
             wx.EVT_CHOICE,
-            lambda _: self.set_algorithm(
-                algo_selection.GetString(algo_selection.GetCurrentSelection())
-            ),
+            lambda _: self.set_algorithm(algo_selection.GetString(algo_selection.GetCurrentSelection())),
         )
 
         sz.Add(algo_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
@@ -486,9 +453,7 @@ class ControlPanel(wx.Panel):
         speed_selection = wx.SpinCtrlDouble(panel, initial=3, min=0.01, inc=0.01)
         speed_sz.Add(speed_selection, 1, wx.FIXED_MINSIZE)
 
-        speed_selection.Bind(
-            wx.EVT_SPINCTRLDOUBLE, lambda _: self.set_speed(speed_selection.GetValue())
-        )
+        speed_selection.Bind(wx.EVT_SPINCTRLDOUBLE, lambda _: self.set_speed(speed_selection.GetValue()))
 
         sz.Add(speed_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
@@ -503,9 +468,7 @@ class ControlPanel(wx.Panel):
 
         floor_sz.AddSpacer(10)
 
-        floor_selection.Bind(
-            wx.EVT_SPINCTRL, lambda _: self.set_floors(floor_selection.GetValue())
-        )
+        floor_selection.Bind(wx.EVT_SPINCTRL, lambda _: self.set_floors(floor_selection.GetValue()))
 
         sz.Add(floor_sz, 0, wx.FIXED_MINSIZE | wx.TOP)
         sz.AddSpacer(5)
@@ -551,9 +514,7 @@ class ControlPanel(wx.Panel):
 
         def set_load_callback(_):
             self.window.manager.set_max_load(load_selection.GetValue() * 60)
-            self.window.WriteToLog(
-                LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}"
-            )
+            self.window.WriteToLog(LogLevel.INFO, f"Setting max load to: {load_selection.GetValue()}")
 
         load_selection.Bind(wx.EVT_SPINCTRL, set_load_callback)
 
@@ -752,7 +713,6 @@ class StatsPanel(scrolled.ScrolledPanel):
             if self.elevator_tc.GetValue() != elevator_fmt:
                 self.elevator_tc.SetValue(elevator_fmt)
             if self.floor_tc.GetValue() != floor_fmt:
-
                 self.floor_tc.SetValue(floor_fmt)
 
         if updated:
@@ -832,9 +792,7 @@ class LogPanel(wx.Panel):
     def OnLogUpdate(self, message):
         self.log_messages.append(message)
         if message.level in self.log_levels:
-            self.log_tc.AppendText(
-                f"[{message.level.name[0]}] {message.tick}: {message.message}\n"
-            )
+            self.log_tc.AppendText(f"[{message.level.name[0]}] {message.tick}: {message.message}\n")
 
     def OnLogLevelChanged(self, e):
         cb = e.GetEventObject()
@@ -843,15 +801,9 @@ class LogPanel(wx.Panel):
         else:
             self.log_levels.remove(LogLevel[cb.GetLabel()])
 
-        filtered_log_messages = filter(
-            lambda x: x.level in self.log_levels, self.log_messages
-        )
+        filtered_log_messages = filter(lambda x: x.level in self.log_levels, self.log_messages)
         self.log_tc.SetValue(
-            "\n".join(
-                f"[{i.level.name[0]}] {i.tick}: {i.message}"
-                for i in filtered_log_messages
-            )
-            + "\n"
+            "\n".join(f"[{i.level.name[0]}] {i.tick}: {i.message}" for i in filtered_log_messages) + "\n"
         )
         # scroll to bottom
         self.log_tc.SetScrollPos(wx.VERTICAL, self.log_tc.GetScrollRange(wx.VERTICAL))

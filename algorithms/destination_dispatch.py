@@ -4,7 +4,7 @@ from models import ElevatorAlgorithm, Elevator, Load
 
 
 class DestinationDispatch(ElevatorAlgorithm):
-    """An algorithm that uses """
+    """An algorithm that uses"""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -12,12 +12,7 @@ class DestinationDispatch(ElevatorAlgorithm):
 
     @property
     def pending_loads(self) -> List[Load]:
-        return list(
-            filter(
-                lambda x: x.id not in self.attended_to.keys(),
-                super().pending_loads,
-            )
-        )
+        return list(filter(lambda x: x.id not in self.attended_to.keys(), super().pending_loads))
 
     @property
     def zone_range(self):
@@ -43,7 +38,10 @@ class DestinationDispatch(ElevatorAlgorithm):
                 # no pending loads
                 return None
             # go to the nearest by initial floor
-            go_to = sorted(available_loads, key=lambda x: abs(x.initial_floor - elevator.current_floor))[0]
+            go_to = sorted(
+                available_loads,
+                key=lambda x: abs(x.initial_floor - elevator.current_floor),
+            )[0]
 
             self.attended_to[elevator.id] = go_to
             destination_floor = go_to.initial_floor

@@ -11,13 +11,13 @@ from utils import load_algorithms
 
 
 if __name__ == "__main__":
-    test_only = ' '.join(sys.argv[1:]) or None
+    test_only = " ".join(sys.argv[1:]) or None
     SEED = 1234
     START_TIME = time.perf_counter()
     options = {
-        'max_processes': None,
-        'include_raw_stats': False,
-        'export_artefacts': False
+        "max_processes": None,
+        "include_raw_stats": False,
+        "export_artefacts": False,
     }
 
     tests = []
@@ -25,48 +25,47 @@ if __name__ == "__main__":
     for algorithm_name in algorithms.keys():
         if test_only is not None and algorithm_name != test_only:
             continue
-        tests.extend((
-            TestSettings(
-                name=f'Busy {algorithm_name}',
-                algorithm_name=algorithm_name,
-                seed=SEED,
-                speed=1000,
-                floors=80,
-                num_elevators=16,
-                num_passengers=1600,
-                total_iterations=10,
-                max_load=15 * 60
-            ),
-            TestSettings(
-                name=f'Slow {algorithm_name}',
-                algorithm_name=algorithm_name,
-                seed=SEED,
-                speed=1000,
-                floors=10,
-                num_elevators=2,
-                num_passengers=100,
-                total_iterations=10,
-                max_load=15 * 60
+        tests.extend(
+            (
+                TestSettings(
+                    name=f"Busy {algorithm_name}",
+                    algorithm_name=algorithm_name,
+                    seed=SEED,
+                    speed=1000,
+                    floors=80,
+                    num_elevators=16,
+                    num_passengers=1600,
+                    total_iterations=10,
+                    max_load=15 * 60,
+                ),
+                TestSettings(
+                    name=f"Slow {algorithm_name}",
+                    algorithm_name=algorithm_name,
+                    seed=SEED,
+                    speed=1000,
+                    floors=10,
+                    num_elevators=2,
+                    num_passengers=100,
+                    total_iterations=10,
+                    max_load=15 * 60,
+                ),
             )
-        ))
+        )
 
     suite = TestSuite(tests, **options)
     suite.start()
 
-    busy_rows = [
-        ("BUSY", "TICK", "WAIT", "TIL", "OCC")
-    ]
-    slow_rows = [
-        ("SLOW", "TICK", "WAIT", "TIL", "OCC")
-    ]
+    busy_rows = [("BUSY", "TICK", "WAIT", "TIL", "OCC")]
+    slow_rows = [("SLOW", "TICK", "WAIT", "TIL", "OCC")]
 
     if suite.results:
         for settings, results in sorted(suite.results.values(), key=lambda x: x[0].name):
             fmt = (
-                settings.algorithm_name, f"{results.ticks.mean:.2f} ({results.ticks.median:.2f})", 
+                settings.algorithm_name,
+                f"{results.ticks.mean:.2f} ({results.ticks.median:.2f})",
                 f"{results.wait_time.mean:.2f} ({results.wait_time.median:.2f})",
                 f"{results.time_in_lift.mean:.2f} ({results.time_in_lift.median:.2f})",
-                f"{results.occupancy.mean:.2f} ({results.occupancy.median:.2f})"
+                f"{results.occupancy.mean:.2f} ({results.occupancy.median:.2f})",
             )
             if settings.name.startswith("Busy"):
                 busy_rows.append(fmt)

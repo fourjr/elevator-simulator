@@ -42,9 +42,7 @@ class GeneratedStats:
         return max(self.values)
 
     def __str__(self):
-        return (
-            f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
-        )
+        return f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
 
     def to_dict(self):
         return {
@@ -105,9 +103,7 @@ class CombinedStats:
         return statistics.mean([stat.maximum for stat in self.stats])
 
     def __str__(self):
-        return (
-            f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
-        )
+        return f"{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}"
 
     def __or__(self, other: "GeneratedStats") -> "CombinedStats":
         """Combines another GeneratedStats object using the | operator"""
@@ -252,9 +248,7 @@ class ElevatorAlgorithm:
         elevator: Elevator
             The elevator to get a new destination for
         """
-        raise NotImplementedError(
-            "get_new_destination must be implemented in a subclass"
-        )
+        raise NotImplementedError("get_new_destination must be implemented in a subclass")
 
     def pre_load_check(self, load, elevator):
         """Checks if a load is allowed to enter the elevator
@@ -350,7 +344,7 @@ class ElevatorAlgorithm:
 
     def add_load(self, load):
         """Adds a load to the system
-        
+
         load: Load
             The load to add"""
         self.loads.append(load)
@@ -358,7 +352,7 @@ class ElevatorAlgorithm:
 
     def remove_load(self, load):
         """Removes a load from the system
-        
+
         load: Load
             The load to remove
         """
@@ -505,13 +499,11 @@ class Elevator:
             self.manager.on_load_move(load)
 
             # unloading off elevator
-            if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(load, self):
-                self.manager.WriteToLog(
-                    LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}"
-                )
-                self.manager.algorithm.time_in_lift.append(
-                    self.manager.current_tick - load.enter_lift_tick + 1
-                )
+            if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(
+                load, self
+            ):
+                self.manager.WriteToLog(LogLevel.INFO, f"{load.id} unloaded from elevator {self.id}")
+                self.manager.algorithm.time_in_lift.append(self.manager.current_tick - load.enter_lift_tick + 1)
                 load.elevator = None
                 to_remove.append(load)
 
@@ -546,14 +538,17 @@ class Elevator:
             A list of loads to add to the elevator
         """
         # Take a person as 60kg on average
-        if  self.manager.algorithm.max_load is not None and self.load + load.weight > self.manager.algorithm.max_load:
+        if (
+            self.manager.algorithm.max_load is not None
+            and self.load + load.weight > self.manager.algorithm.max_load
+        ):
             raise FullElevator(self.id)
 
         self.loads.append(load)
         self.manager.algorithm.on_load_load(load, self)
 
     def __repr__(self) -> str:
-        if getattr(self, 'manager', None):
+        if getattr(self, "manager", None):
             return f"<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>"
         else:
             return f"<Elevator* {self.id} load={self.load // 60} current_floor={self._current_floor}>"
@@ -613,9 +608,7 @@ class ElevatorManager:
                 if self.algorithm.simulation_running:
                     # only append if there are things going on
                     for elevator in self.algorithm.elevators:
-                        self.algorithm.occupancy.append(
-                            (elevator.load / self.algorithm.max_load) * 100
-                        )
+                        self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
 
             time.sleep(3 * (1 / self.speed))
 
@@ -685,9 +678,7 @@ class ElevatorManager:
 
 
 class ElevatorManagerThread(ElevatorManager, threading.Thread):
-    def __init__(
-        self, parent, event: Callable, algorithm: ElevatorAlgorithm, *, gui: bool = True
-    ):
+    def __init__(self, parent, event: Callable, algorithm: ElevatorAlgorithm, *, gui: bool = True):
         ElevatorManager.__init__(self, parent, event, algorithm, gui=gui)
         threading.Thread.__init__(self)
         self.start()

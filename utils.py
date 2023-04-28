@@ -29,9 +29,7 @@ def load_algorithms() -> dict[str, ElevatorAlgorithm]:
 
         algorithm = module.__algorithm__
         if not issubclass(algorithm, ElevatorAlgorithm):
-            raise InvalidAlgorithm(
-                f"Algorithm in {module} is not a subclass of ElevatorAlgorithm"
-            )
+            raise InvalidAlgorithm(f"Algorithm in {module} is not a subclass of ElevatorAlgorithm")
 
         algorithm.name = module.__name__
         algorithms[algorithm.name] = algorithm
@@ -58,22 +56,18 @@ def save_algorithm(algorithm, fn=None) -> str:
     fp = os.path.join("exports", fn)
     with open(fp, "wb") as f:
         f.write(
-            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode(
-                "utf8"
-            )
+            f"fourjr/elevator-simulator {dt} fourjr/elevator-simulator\00\00".encode("utf8")
             + gzip.compress(pickle.dumps(algorithm))
-            + f"\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode(
-                "utf8"
-            )
+            + f"\00\00fourjr/elevator-simulator {dt} fourjr/elevator-simulator".encode("utf8")
         )
 
     return fn
 
 
-def split_array(a, n) -> Generator[Tuple[int]]:
+def split_array(a, n) -> Generator[Tuple[int], None, None]:
     """https://stackoverflow.com/a/2135920/8129786"""
     k, m = divmod(len(a), n)
-    return (a[(i % len(a))*k+min(i % len(a), m):(i+1)*k+min((i % len(a))+1, m)] for i in range(n))
+    return (a[(i % len(a)) * k + min(i % len(a), m) : (i + 1) * k + min((i % len(a)) + 1, m)] for i in range(n))
 
 
 def jq_join_timeout(jq, timeout) -> None:
@@ -85,4 +79,4 @@ def jq_join_timeout(jq, timeout) -> None:
     with jq._cond:
         if not jq._unfinished_tasks._semlock._is_zero():
             if not jq._cond.wait(timeout=timeout):
-                raise TimeoutError('jq_join_timeout timed out')
+                raise TimeoutError("jq_join_timeout timed out")

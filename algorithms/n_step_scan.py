@@ -6,6 +6,7 @@ from utils import split_array
 
 class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
     """The standard elevator algorithm"""
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_zones = len(self.elevators)
@@ -34,7 +35,12 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
             )[0].destination_floor
         else:
             elevator_index = self.elevators.index(elevator)
-            available_loads = list(filter(lambda x: x.initial_floor in self.zones[elevator_index], self.pending_loads))
+            available_loads = list(
+                filter(
+                    lambda x: x.initial_floor in self.zones[elevator_index],
+                    self.pending_loads,
+                )
+            )
             if len(available_loads) == 0:
                 # no pending loads
                 self.current_direction[elevator.id] = None
@@ -68,6 +74,7 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
 
         if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
             del self.attended_to[elevator.id]
+
 
 __name__ = "NStepSCAN"
 __algorithm__ = ElevatorAlgorithmNStepSCAN

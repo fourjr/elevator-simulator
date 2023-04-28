@@ -12,7 +12,13 @@ from multiprocessing import Queue, JoinableQueue
 
 from enums import Constants, LogLevel, LogOrigin
 from errors import TestTimeout
-from models import CombinedStats, ElevatorAlgorithm, Load, SimulationStats, ElevatorManager
+from models import (
+    CombinedStats,
+    ElevatorAlgorithm,
+    Load,
+    SimulationStats,
+    ElevatorManager,
+)
 from utils import jq_join_timeout, load_algorithms, save_algorithm
 
 
@@ -24,12 +30,7 @@ class TestStats:
     occupancy: CombinedStats = field(default_factory=CombinedStats)
 
     def __len__(self):
-        assert (
-            len(self.ticks)\
-                == len(self.wait_time)
-                == len(self.time_in_lift)
-                == len(self.occupancy)
-        )
+        assert len(self.ticks) == len(self.wait_time) == len(self.time_in_lift) == len(self.occupancy)
 
         return len(self.ticks)
 
@@ -62,7 +63,7 @@ class TestStats:
 @dataclass
 class TestSettings:
     """Settings for a single test
-    
+
     name: str
         Name of the test
     seed: int
@@ -84,6 +85,7 @@ class TestSettings:
     loads: Optional[List[Load]]
         List of custom loads to use
     """
+
     name: str
     seed: int
     speed: int
@@ -121,7 +123,11 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
     def __init__(self, in_queue, out_queue, error_queue, export_queue):
         self.algorithms = load_algorithms()
         super().__init__(
-            self, None, self.algorithms[Constants.DEFAULT_ALGORITHM], gui=False, log_func=self.log_message
+            self,
+            None,
+            self.algorithms[Constants.DEFAULT_ALGORITHM],
+            gui=False,
+            log_func=self.log_message,
         )
         self._running = False
         self.in_queue = in_queue
@@ -129,10 +135,7 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
         self.error_queue = error_queue
         self.export_queue = export_queue
 
-        self._process = mp.Process(
-            target=self.process_loop,
-            daemon=True,
-        )
+        self._process = mp.Process(target=self.process_loop, daemon=True)
 
         self.name = self._process.name
         self.latest_load_move = 0
@@ -254,10 +257,7 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
         self._running = False
 
     def log_message(self, level: LogLevel, message, origin=LogOrigin.SIMULATION):
-        if (
-            level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO)
-            or origin == LogOrigin.TEST
-        ):
+        if level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO) or origin == LogOrigin.TEST:
             print(level.name, message)
 
     def __getstate__(self):
@@ -298,7 +298,10 @@ class BackgroundProcess(mp.Process):
                     else:
                         del self.consumers[name]
                         consumer = TestSuiteConsumer(
-                            self.in_queue, self.out_queue, self.error_queue, self.export_queue
+                            self.in_queue,
+                            self.out_queue,
+                            self.error_queue,
+                            self.export_queue,
                         )
                         consumer.start()
                         self.consumers[consumer.name] = consumer
@@ -321,6 +324,7 @@ class BackgroundProcess(mp.Process):
                             self.export_queue.task_done()
         except KeyboardInterrupt:
             return
+
 
 class TestSuite:
     def __init__(self, tests, **options):
@@ -350,9 +354,7 @@ class TestSuite:
 
         self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
 
-        hard_max_processes = min(
-            mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests)
-        )
+        hard_max_processes = min(mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests))
 
         max_processes = options.pop("max_processes", None)
         if max_processes is None:
@@ -382,7 +384,10 @@ class TestSuite:
         """Starts the Test Suite"""
         for _ in range(self.max_processes):
             consumer = TestSuiteConsumer(
-                self.in_queue, self.out_queue, self.error_queue, self.export_queue if self.export_artefacts else None
+                self.in_queue,
+                self.out_queue,
+                self.error_queue,
+                self.export_queue if self.export_artefacts else None,
             )
             self.consumers[consumer.name] = consumer
 
@@ -426,7 +431,10 @@ class TestSuite:
         fn = f"results/{dt}.json"
 
         data = [
-            {**settings.to_dict(len(stats)), "stats": stats.to_dict(self.include_raw_stats)}
+            {
+                **settings.to_dict(len(stats)),
+                "stats": stats.to_dict(self.include_raw_stats),
+            }
             for settings, stats in self.results.values()
         ]
         with open(fn, "w") as f:
