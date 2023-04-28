@@ -1,4 +1,5 @@
 import itertools
+import random
 import statistics
 import threading
 import time
@@ -208,6 +209,7 @@ class ElevatorAlgorithm:
         self.elevators: List[Elevator] = elevators or []
         self.loads: List[Load] = loads or []
         self.max_load = 15 * 60
+        self.rnd = random.Random()
 
         self.tick_count = 0
         self.wait_times = GeneratedStats()

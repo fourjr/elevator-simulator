@@ -1,4 +1,3 @@
-import random
 from models import Elevator, ElevatorAlgorithm
 
 
@@ -13,10 +12,10 @@ class ElevatorAlgorithmScatter(ElevatorAlgorithm):
             # elevator empty, try to get new load
             if len(self.pending_loads) == 0:
                 return None
-            load = random.choice(self.pending_loads)
+            load = self.rnd.choice(self.pending_loads)
             return load.initial_floor
         else:
-            load = random.choice(elevator.loads)
+            load = self.rnd.choice(elevator.loads)
             return load.destination_floor
 
 

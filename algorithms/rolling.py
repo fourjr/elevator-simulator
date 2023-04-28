@@ -1,4 +1,3 @@
-import random
 from models import Direction, ElevatorAlgorithm, Elevator, Load
 
 
@@ -15,7 +14,7 @@ class ElevatorAlgorithmRolling(ElevatorAlgorithm):
         """
         prev_direction = self.prev_direction.get(elevator.id, None)
         if prev_direction is None:
-            prev_direction = random.choice([Direction.UP, Direction.DOWN])
+            prev_direction = self.rnd.choice([Direction.UP, Direction.DOWN])
 
         if prev_direction is Direction.DOWN:
             self.prev_direction[elevator.id] = Direction.UP

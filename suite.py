@@ -97,9 +97,9 @@ class TestSettings:
     max_load: int
     loads: List[Load] = field(default_factory=list)
 
-    def __post_init__(self):
+    def init_passengers(self, rnd: random.Random):
         for _ in range(self.num_passengers):
-            initial, destination = random.sample(range(1, self.floors + 1), 2)
+            initial, destination = rnd.sample(range(1, self.floors + 1), 2)
             load = Load(initial, destination, 60)
             self.loads.append(load)
 
@@ -159,19 +159,27 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
         try:
             while True:
                 n_iter, settings = self.in_queue.get()
+
                 self.current_simulation = (n_iter, settings)
 
-                random.seed((settings.seed + n_iter) % 2**32)
                 algo = self.algorithms[settings.algorithm_name]
                 algo.name = settings.algorithm_name
                 self.reset(algo)
+                self.algorithm.rnd = random.Random((settings.seed + n_iter) % 2**32)
 
                 self.set_speed(settings.speed)
                 self.set_floors(settings.floors)
                 self.set_max_load(settings.max_load)
 
+                settings.init_passengers(self.algorithm.rnd)
+
+                elevator_floors = []
                 for _ in range(settings.num_elevators):
-                    self.add_elevator(random.randint(1, settings.floors))
+                    elevator_floors.append(self.algorithm.rnd.randint(1, settings.floors))
+
+                for floor in elevator_floors:
+                    self.add_elevator(floor)
+
                 for load in settings.loads:
                     self.algorithm.add_load(load)
 
@@ -404,10 +412,11 @@ class TestSuite:
                 else:
                     break
         except Exception:
-            traceback.print_exc()
             self.close(force=True)
+            raise
         except KeyboardInterrupt:
             self.close(force=True)
+            raise
         else:
             print("All tests finished, gathering results")
             while True:

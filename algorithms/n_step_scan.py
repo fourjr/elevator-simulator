@@ -34,6 +34,9 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
                 key=lambda x: abs(x.destination_floor - elevator.current_floor),
             )[0].destination_floor
         else:
+            if elevator not in self.elevators:
+                return None
+
             elevator_index = self.elevators.index(elevator)
             available_loads = list(
                 filter(

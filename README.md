@@ -75,7 +75,8 @@ def pre_unload_check(self, load, elevator) -> bool:
 ### The Cycle
 
 ![cycle](images/cycle.svg)
-Do note that for the GUI, GUI events will be triggered upon every configuration change and every tick. Refer to the [GUI](#gui) section and [ElevatorManager](/models.py) > `send_event` for more information.
+
+> GUI events will be triggered upon every configuration change and every tick. Refer to [GUI](#gui) and [ElevatorManager](/models.py) > `send_event` for more information.
 
 ## GUI
 
@@ -122,6 +123,8 @@ The number of test processes (`N`) are determined by the following formula:
 - <= Number of total iterations
 
 The processes are then spawned and iterations are run concurrently. Upon any errors raised by the algorithm, it will be passed to the Background Process and the iteration will be skipped. A new process will be spawned to continue the test suite.
+
+Tests are *mostly replicable* with the given seed. The initial state should be the same but there might be small kinks that could result in slightly varied outcomes. Note that for each seed, the iteration count is also attached to it.
 
 #### Benchmark Example
 
