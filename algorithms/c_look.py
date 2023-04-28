@@ -1,6 +1,6 @@
 from collections import defaultdict
 from algorithms.look import ElevatorAlgorithmLOOK
-from enums import Direction
+from constants import Direction
 
 
 class ElevatorAlgorithmC_LOOK(ElevatorAlgorithmLOOK):

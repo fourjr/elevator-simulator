@@ -1,5 +1,5 @@
 from algorithms.scan import ElevatorAlgorithmSCAN
-from enums import Direction
+from constants import Direction
 from models import Elevator
 from utils import split_array
 

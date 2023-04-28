@@ -7,7 +7,7 @@ import wx
 from dataclasses import dataclass, field
 from typing import Callable, List, Tuple
 
-from enums import Direction, LogLevel, Constants
+from constants import Direction, LogLevel, Constants
 from errors import BadArgument, FullElevator
 
 

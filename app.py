@@ -13,7 +13,7 @@ import wx.lib.scrolledpanel as scrolled
 import wx.lib.newevent as wxne
 import wx.aui as aui
 
-from enums import ID, Unicode, Constants
+from constants import ID, Unicode, Constants
 from errors import BadArgument
 from models import LogLevel, LogMessage, ElevatorManagerThread
 from utils import load_algorithms, save_algorithm

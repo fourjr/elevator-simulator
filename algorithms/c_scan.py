@@ -1,6 +1,6 @@
 from collections import defaultdict
 from algorithms.scan import ElevatorAlgorithmSCAN
-from enums import Direction
+from constants import Direction
 
 
 class ElevatorAlgorithmC_SCAN(ElevatorAlgorithmSCAN):

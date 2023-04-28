@@ -10,7 +10,7 @@ import traceback
 from typing import List, Tuple
 from multiprocessing import Queue, JoinableQueue
 
-from enums import Constants, LogLevel, LogOrigin
+from constants import Constants, LogLevel, LogOrigin
 from errors import TestTimeout
 from models import (
     CombinedStats,
