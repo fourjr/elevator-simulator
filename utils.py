@@ -4,6 +4,7 @@ import importlib
 import os
 import pickle
 from datetime import datetime
+from time import time
 
 from errors import InvalidAlgorithm
 from models import ElevatorAlgorithm
@@ -56,3 +57,10 @@ def split_array(a, n):
     """https://stackoverflow.com/a/2135920/8129786"""
     k, m = divmod(len(a), n)
     return (a[(i % len(a))*k+min(i % len(a), m):(i+1)*k+min((i % len(a))+1, m)] for i in range(n))
+
+
+def jq_join_timeout(jq, timeout):
+    with jq._cond:
+        if not jq._unfinished_tasks._semlock._is_zero():
+            if not jq._cond.wait(timeout=timeout):
+                raise TimeoutError('jq_join_timeout timed out')

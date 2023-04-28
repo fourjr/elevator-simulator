@@ -6,6 +6,7 @@ import multiprocessing as mp
 import random
 from datetime import datetime
 from dataclasses import dataclass, field
+import time
 import traceback
 from typing import List, Tuple
 from multiprocessing import Queue, JoinableQueue
@@ -13,7 +14,7 @@ from multiprocessing import Queue, JoinableQueue
 from enums import Constants, LogLevel, LogOrigin
 from errors import TestTimeout
 from models import CombinedStats, ElevatorAlgorithm, Load, SimulationStats, ElevatorManager
-from utils import load_algorithms, save_algorithm
+from utils import jq_join_timeout, load_algorithms, save_algorithm
 
 
 @dataclass
@@ -117,18 +118,23 @@ class TestSettings:
         }
 
 
-class TestSuiteConsumer(ElevatorManager):
+class TestSuiteConsumer(ElevatorManager, mp.Process):
     def __init__(self, in_queue, out_queue, error_queue, export_queue):
         self.algorithms = load_algorithms()
         super().__init__(
             self, None, self.algorithms[Constants.DEFAULT_ALGORITHM], gui=False, log_func=self.log_message
         )
         self._running = False
+        self.in_queue = in_queue
+        self.out_queue = out_queue
+        self.error_queue = error_queue
+        self.export_queue = export_queue
+
         self._process = mp.Process(
             target=self.process_loop,
-            args=(in_queue, out_queue, error_queue, export_queue),
             daemon=True,
         )
+
         self.name = self._process.name
         self.latest_load_move = 0
         self.previous_loads = []
@@ -141,10 +147,16 @@ class TestSuiteConsumer(ElevatorManager):
     def start(self):
         self._process.start()
 
-    def process_loop(self, in_queue, out_queue, error_queue, export_queue):
+    def close(self):
+        self._process.terminate()
+        self._process.join()
+        self._process.close()
+        super().close()
+
+    def process_loop(self):
         try:
             while True:
-                n_iter, settings = in_queue.get()
+                n_iter, settings = self.in_queue.get()
                 self.current_simulation = (n_iter, settings)
 
                 random.seed((settings.seed + n_iter) % 2**32)
@@ -162,9 +174,9 @@ class TestSuiteConsumer(ElevatorManager):
                     self.algorithm.add_load(load)
 
                 # save
-                if export_queue is not None:
+                if self.export_queue is not None:
                     name = f"{settings.name}_{n_iter}"
-                    export_queue.put((name, copy.deepcopy(self.algorithm)))
+                    self.export_queue.put((name, copy.deepcopy(self.algorithm)))
 
                 self.active = True
                 self.log_message(
@@ -188,15 +200,15 @@ class TestSuiteConsumer(ElevatorManager):
                         f"{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.current_tick=}",
                         LogOrigin.TEST,
                     )
-                    out_queue.put(((n_iter, settings), self.algorithm.stats))
+                    self.out_queue.put(((n_iter, settings), self.algorithm.stats))
 
-                in_queue.task_done()
+                self.in_queue.task_done()
 
         except KeyboardInterrupt:
             return
         except Exception as e:
             # mark as done although errored
-            in_queue.task_done()
+            self.in_queue.task_done()
 
             # need to format first as pickle will remove the traceback
             e.formatted_exception = traceback.format_exc().strip()
@@ -215,10 +227,10 @@ class TestSuiteConsumer(ElevatorManager):
                     LogOrigin.TEST,
                 )
 
-            error_queue.put((self.name, e))
+            self.error_queue.put((self.name, e))
 
     def on_tick(self):
-        if self._running is True and self.algorithm.simulation_running is False:
+        if self.running is True and self.algorithm.simulation_running is False:
             self.end_simulation()
 
         # frozen loads
@@ -265,41 +277,51 @@ class BackgroundProcess(mp.Process):
         consumers: List[TestSuiteConsumer],
         close_event,
     ):
-        super().__init__(
-            target=self.process_loop,
-            args=(in_queue, out_queue, error_queue, export_queue, consumers, close_event),
-        )
+        super().__init__()
+        self.in_queue = in_queue
+        self.out_queue = out_queue
+        self.error_queue = error_queue
+        self.export_queue = export_queue
+        self.consumers = consumers
+        self.close_event = close_event
 
-    def process_loop(self, in_queue, out_queue, error_queue, export_queue, consumers, close_event):
-        while close_event.is_set() is False:
-            while close_event.is_set() is False:
-                try:
-                    name, e = error_queue.get(timeout=0.2)
-                except queue.Empty:
-                    break
-                else:
-                    del consumers[name]
-                    consumer = TestSuiteConsumer(in_queue, out_queue, error_queue, export_queue)
-                    consumer.start()
-                    consumers[consumer.name] = consumer
+    def is_closed(self):
+        return self.close_event.is_set()
 
-                    print(f"[E_HANDLER] INFO {name} died, restarting as {consumer.name}")
-                    print(e.formatted_exception)
-                    error_queue.task_done()
-
-            if export_queue is not None:
-                while close_event.is_set() is False:
+    def run(self):
+        try:
+            while not self.is_closed():
+                while not self.is_closed():
                     try:
-                        name, algo = export_queue.get(timeout=0.2)
+                        name, e = self.error_queue.get(timeout=0.1)
                     except queue.Empty:
                         break
                     else:
-                        dt = datetime.now().isoformat().replace(":", "-")
-                        fn = f"{dt}_{name}.esi"
-                        save_algorithm(algo, fn)
-                        print(f"[F_HANDLER] INFO {name} exported and saved")
-                        export_queue.task_done()
+                        del self.consumers[name]
+                        consumer = TestSuiteConsumer(
+                            self.in_queue, self.out_queue, self.error_queue, self.export_queue
+                        )
+                        consumer.start()
+                        self.consumers[consumer.name] = consumer
 
+                        print(f"[E_HANDLER] INFO {name} died, restarting as {consumer.name}")
+                        print(e.formatted_exception)
+                        self.error_queue.task_done()
+
+                if self.export_queue is not None:
+                    while not self.is_closed():
+                        try:
+                            name, algo = self.export_queue.get(timeout=0.2)
+                        except queue.Empty:
+                            break
+                        else:
+                            dt = datetime.now().isoformat().replace(":", "-")
+                            fn = f"{dt}_{name}.esi"
+                            save_algorithm(algo, fn)
+                            print(f"[F_HANDLER] INFO {name} exported and saved")
+                            self.export_queue.task_done()
+        except KeyboardInterrupt:
+            return
 
 class TestSuite:
     def __init__(self, tests, **options):
@@ -324,10 +346,8 @@ class TestSuite:
         ] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
 
-        if options.pop("export_artefacts", True) is True:
-            self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
-        else:
-            self.export_queue = None
+        self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
+        self.export_artefacts = options.pop("export_artefacts", True)
 
         self.close_event = mp.Event()
         self.include_raw_stats = options.pop("include_raw_stats", True)
@@ -349,47 +369,54 @@ class TestSuite:
         self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
 
         self.consumers = {}
-        self.error_process = None
+        self.background_process = BackgroundProcess(
+            self.in_queue,
+            self.out_queue,
+            self.error_queue,
+            self.export_queue if self.export_artefacts else None,
+            self.consumers,
+            self.close_event,
+        )
 
     def start(self):
         """Starts the Test Suite"""
         for _ in range(self.max_processes):
             consumer = TestSuiteConsumer(
-                self.in_queue, self.out_queue, self.error_queue, self.export_queue
+                self.in_queue, self.out_queue, self.error_queue, self.export_queue if self.export_artefacts else None
             )
             self.consumers[consumer.name] = consumer
 
-        for p in self.consumers.values():
-            p.start()
-
-        self.error_process = BackgroundProcess(
-            self.in_queue,
-            self.out_queue,
-            self.error_queue,
-            self.export_queue,
-            self.consumers,
-            self.close_event,
-        )
-        self.error_process.start()
-
         try:
-            self.in_queue.join()
+            self.background_process.start()
+            for p in self.consumers.values():
+                p.start()
+
+            while True:
+                try:
+                    jq_join_timeout(self.in_queue, timeout=0.1)
+                except TimeoutError:
+                    pass
+                else:
+                    break
+        except Exception:
+            traceback.print_exc()
+            self.close(force=True)
         except KeyboardInterrupt:
-            return
+            self.close(force=True)
+        else:
+            print("All tests finished, gathering results")
+            while True:
+                try:
+                    (_, settings), stats = self.out_queue.get(block=False)
+                except queue.Empty:
+                    break
+                else:
+                    if settings.name not in self.results:
+                        self.results[settings.name] = (settings, TestStats())
 
-        print("All tests finished, gathering results")
-        while True:
-            try:
-                (_, settings), stats = self.out_queue.get(block=False)
-            except queue.Empty:
-                break
-            else:
-                if settings.name not in self.results:
-                    self.results[settings.name] = (settings, TestStats())
-
-                self.results[settings.name][1].append(stats)
-
-        self.close()
+                    self.results[settings.name][1].append(stats)
+            self.save_results()
+            self.close()
 
     def save_results(self):
         dt = datetime.now().isoformat().replace(":", "-")
@@ -407,15 +434,24 @@ class TestSuite:
 
         print(f"Saved results to {fn}")
 
-    def close(self):
-        self.save_results()
-        if self.export_queue is not None:
-            self.export_queue.join()
-
+    def close(self, *, force=False):
         self.close_event.set()
-        self.error_process.join()
+        if force:
+            self.background_process.terminate()
+            self.background_process.join()
+
+            # allow process to be abruptly stopped without waiting for queues to empty
+            # https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues
+            self.in_queue.cancel_join_thread()
+            self.out_queue.cancel_join_thread()
+            self.error_queue.cancel_join_thread()
+            self.export_queue.cancel_join_thread()
+        else:
+            self.background_process.join()
+            self.export_queue.join()
 
         self.in_queue.close()
         self.out_queue.close()
+        self.export_queue.close()
         self.error_queue.close()
-        self.error_process.close()
+        self.background_process.close()

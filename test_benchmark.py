@@ -11,14 +11,13 @@ from utils import load_algorithms
 
 
 if __name__ == "__main__":
-
     test_only = ' '.join(sys.argv[1:]) or None
     SEED = 1234
     START_TIME = time.perf_counter()
     options = {
         'max_processes': None,
         'include_raw_stats': False,
-        'export_artefacts': True
+        'export_artefacts': False
     }
 
     tests = []
@@ -61,29 +60,33 @@ if __name__ == "__main__":
         ("SLOW", "TICK", "WAIT", "TIL", "OCC")
     ]
 
-    for settings, results in sorted(suite.results.values(), key=lambda x: x[0].name):
-        fmt = (
-            settings.algorithm_name, f"{results.ticks.mean:.2f} ({results.ticks.median:.2f})", 
-            f"{results.wait_time.mean:.2f} ({results.wait_time.median:.2f})",
-            f"{results.time_in_lift.mean:.2f} ({results.time_in_lift.median:.2f})",
-            f"{results.occupancy.mean:.2f} ({results.occupancy.median:.2f})"
-        )
-        if settings.name.startswith("Busy"):
-            busy_rows.append(fmt)
-        elif settings.name.startswith("Slow"):
-            slow_rows.append(fmt)
+    if suite.results:
+        for settings, results in sorted(suite.results.values(), key=lambda x: x[0].name):
+            fmt = (
+                settings.algorithm_name, f"{results.ticks.mean:.2f} ({results.ticks.median:.2f})", 
+                f"{results.wait_time.mean:.2f} ({results.wait_time.median:.2f})",
+                f"{results.time_in_lift.mean:.2f} ({results.time_in_lift.median:.2f})",
+                f"{results.occupancy.mean:.2f} ({results.occupancy.median:.2f})"
+            )
+            if settings.name.startswith("Busy"):
+                busy_rows.append(fmt)
+            elif settings.name.startswith("Slow"):
+                slow_rows.append(fmt)
 
-    # table
-    maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*(busy_rows + slow_rows))]
-    busy_rows.insert(1, tuple("-" * (maxlens[i] - 2) for i in range(len(maxlens))))
-    slow_rows.insert(1, tuple("-" * (maxlens[i] - 2) for i in range(len(maxlens))))
+        # table
+        maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*(busy_rows + slow_rows))]
+        busy_rows.insert(1, tuple("-" * (maxlens[i] - 2) for i in range(len(maxlens))))
+        slow_rows.insert(1, tuple("-" * (maxlens[i] - 2) for i in range(len(maxlens))))
 
-    for row in busy_rows:
-        print("  ".join(f"{x:<{maxlens[i]}}" for i, x in enumerate(row)))
-    print()
-    for row in slow_rows:
-        print("  ".join(f"{x:<{maxlens[i]}}" for i, x in enumerate(row)))
-    print()
+        print()
+        for row in busy_rows:
+            print("  ".join(f"{x:<{maxlens[i]}}" for i, x in enumerate(row)))
+
+        print()
+
+        for row in slow_rows:
+            print("  ".join(f"{x:<{maxlens[i]}}" for i, x in enumerate(row)))
+        print()
 
     time_taken = time.perf_counter() - START_TIME
     print(f"Total time: {time_taken:.2f}s")
