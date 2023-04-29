@@ -220,11 +220,10 @@ class ElevatorAlgorithm:
         self.pre_tick()
         for elevator in self.elevators:
             if elevator.load <= self.max_load:
-                loads_to_add = []
                 for load in self.loads:
                     # add to elevator
                     if load.elevator is None and load.initial_floor == elevator.current_floor:
-                        if elevator.load + load.weight + sum(x.weight for x in loads_to_add) > self.max_load:
+                        if elevator.load + load.weight > self.max_load:
                             continue
                         if not self.pre_load_check(load, elevator):
                             self.manager.WriteToLog(
@@ -237,7 +236,6 @@ class ElevatorAlgorithm:
                             LogLevel.TRACE,
                             f'Load {load.id} added to elevator {elevator.id}',
                         )
-                        loads_to_add.append(load)
                         load.elevator = elevator
                         load.enter_lift_tick = self.tick_count
                         wait_time = self.tick_count - load.tick_created

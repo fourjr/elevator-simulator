@@ -56,7 +56,7 @@ class Elevator:
         )
         self._current_floor += increment
 
-        to_remove = []
+        to_unload = []
         for load in self.loads:
             load.current_floor = self.current_floor
             self.manager.on_load_move(load)
@@ -70,9 +70,9 @@ class Elevator:
                     self.manager.algorithm.tick_count - load.enter_lift_tick + 1
                 )
                 load.elevator = None
-                to_remove.append(load)
+                to_unload.append(load)
 
-        for load in to_remove:
+        for load in to_unload:
             self.loads.remove(load)
             self.manager.algorithm.remove_load(load)
 
@@ -99,8 +99,8 @@ class Elevator:
     def add_load(self, load):
         """Adds new loads to the elevator.
 
-        loads: list[Load]
-            A list of loads to add to the elevator
+        load: Load
+            A load to add to the elevator
         """
         # Take a person as 60kg on average
         if (
