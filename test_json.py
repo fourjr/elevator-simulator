@@ -63,3 +63,4 @@ if __name__ == '__main__':
     print('Starting test suite...')
     suite = TestSuite(tests, **options)
     suite.start()
+    print(suite.format_results())

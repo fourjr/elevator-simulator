@@ -129,15 +129,15 @@
     },
     {
       "lastUsedInstanceId": "instance:kdU0Pv75DGBYxwLMEOupm",
-      "lastActivityTimestamp": 1682689704615,
+      "lastActivityTimestamp": 1682689829983,
       "cursor": {
-        "x": 1379.6987100983863,
-        "y": 241.40471730832633,
+        "x": 752.144938681588,
+        "y": 883.700072701547,
         "z": 0
       },
       "viewportPageBounds": {
         "x": -592.6129393605975,
-        "y": -203.87124205804366,
+        "y": 4.579563579533442,
         "w": 2574.2508067416256,
         "h": 1535.2652220452605
       },
@@ -455,7 +455,7 @@
     },
     {
       "x": 592.6129393605975,
-      "y": 203.87124205804366,
+      "y": -4.579563579533442,
       "z": 0.5996618704239081,
       "id": "camera:2XjAFqxOCHj5A1iQRIx0d",
       "typeName": "camera"
@@ -463,8 +463,10 @@
     {
       "editingId": null,
       "croppingId": null,
-      "selectedIds": [],
-      "hoveredId": "shape:-X1jScLlOmrFDlrDztsuG",
+      "selectedIds": [
+        "shape:1Ju-Xc4GHoLoU-k4ErK6H"
+      ],
+      "hoveredId": null,
       "erasingIds": [],
       "hintingIds": [],
       "focusLayerId": null,
@@ -482,7 +484,7 @@
       "type": "geo",
       "props": {
         "w": 161.09206738983482,
-        "h": 68.71585591426657,
+        "h": 56.28500175476074,
         "geo": "rectangle",
         "color": "yellow",
         "labelColor": "black",

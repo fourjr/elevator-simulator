@@ -105,6 +105,8 @@ The test suite exposes a `TestSuite` class that takes in `TestSettings`. This al
 
 Further options can also be fed into the `TestSuite` class. Refer to the source code for exact arguments.
 
+It is recommended for the `name` to not be distinguishable to the algorithm and multiple tests (with different algorithms) to have identical names.
+
 Source Code: [suite.py](/suite.py)    
 Examples: [test_json.py](/test_json.py) ([test.example.json](/test.example.json)), [test_benchmark.py](/test_benchmark.py)
 

@@ -5,7 +5,7 @@
     },
     "tests": [
         {
-            "name": "FCFS Test",
+            "name": "Test",
             "algorithm_name": "FCFS",
             "total_iterations": 10,
             "seed": 20836,

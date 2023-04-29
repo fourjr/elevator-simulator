@@ -84,6 +84,8 @@ class TestSettings:
         Maximum load of the elevators (in kg)
     loads: Optional[List[Load]]
         List of custom loads to use
+    init_func: Optional[Callable[[ElevatorAlgorithm], None]
+        Function to call to initialize the algorithm
     """
 
     name: str
@@ -96,6 +98,7 @@ class TestSettings:
     total_iterations: int
     max_load: int
     loads: List[Load] = field(default_factory=list)
+    init_function: callable = None
 
     def init_passengers(self, rnd: random.Random):
         for _ in range(self.num_passengers):
@@ -110,11 +113,12 @@ class TestSettings:
     def to_dict(self, iteration_count=None):
         return {
             'name': self.name,
+            'algorithm_name': self.algorithm_name,
             'seed': self.seed,
             'speed': self.speed,
             'floors': self.floors,
             'num_elevators': self.num_elevators,
-            'num_passengers': self.num_passengers,
+            'num_loads': len(self.loads),
             'total_iterations': iteration_count or self.total_iterations,
         }
 
@@ -166,6 +170,9 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
                 algo.name = settings.algorithm_name
                 self.reset(algo)
                 self.algorithm.rnd = random.Random((settings.seed + n_iter) % 2 ** 32)
+
+                if settings.init_function is not None:
+                    settings.init_function(self.algorithm)
 
                 self.set_speed(settings.speed)
                 self.set_floors(settings.floors)
@@ -390,16 +397,16 @@ class TestSuite:
 
     def start(self):
         """Starts the Test Suite"""
-        for _ in range(self.max_processes):
-            consumer = TestSuiteConsumer(
-                self.in_queue,
-                self.out_queue,
-                self.error_queue,
-                self.export_queue if self.export_artefacts else None,
-            )
-            self.consumers[consumer.name] = consumer
-
         try:
+            for _ in range(self.max_processes):
+                consumer = TestSuiteConsumer(
+                    self.in_queue,
+                    self.out_queue,
+                    self.error_queue,
+                    self.export_queue if self.export_artefacts else None,
+                )
+                self.consumers[consumer.name] = consumer
+
             self.background_process.start()
             for p in self.consumers.values():
                 p.start()
@@ -431,6 +438,36 @@ class TestSuite:
                     self.results[settings.name][1].append(stats)
             self.save_results()
             self.close()
+
+    def format_results(self):
+        """Formats the results for printing"""
+        test_rows = {}
+        final_fmt = []
+
+        if self.results:
+            for settings, results in sorted(self.results.values(), key=lambda x: x[0].name):
+                fmt = (
+                    settings.algorithm_name,
+                    str(len(results)),
+                    f'{results.ticks.mean:.2f} ({results.ticks.median:.2f})',
+                    f'{results.wait_time.mean:.2f} ({results.wait_time.median:.2f})',
+                    f'{results.time_in_lift.mean:.2f} ({results.time_in_lift.median:.2f})',
+                    f'{results.occupancy.mean:.2f} ({results.occupancy.median:.2f})',
+                )
+                if settings.name not in test_rows:
+                    test_rows[settings.name] = [(settings.name.upper(), 'NUM', 'TICK', 'WAIT', 'TIL', 'OCC')]
+
+                test_rows[settings.name].append(fmt)
+
+            maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*test_rows.values())]
+
+        final_fmt.append('')
+        for row in test_rows.values():
+            row.insert(1, tuple('-' * (maxlens[i] - 2) for i in range(len(maxlens))))
+            final_fmt.append('  '.join(f'{x:<{maxlens[i]}}' for i, x in enumerate(row)))
+            final_fmt.append('')
+
+        return '\n'.join(final_fmt)
 
     def save_results(self):
         dt = datetime.now().isoformat().replace(':', '-')
