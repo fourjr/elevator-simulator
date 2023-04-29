@@ -4,10 +4,11 @@ from models import ElevatorAlgorithm, Elevator, Load
 
 
 class DestinationDispatch(ElevatorAlgorithm):
-    """An algorithm that uses the destination floor
+    """An algorithm that uses more advanced information
+    This assumes that the manager knows the destination floor of each individual load
 
     The zone range of the elevator is defined by the first load it picks up.
-    It is a +- floor range calculated by the load_floor_ratio
+    It is a ± floor range calculated by the load_floor_ratio
 
     1. Service the closest load
     2. Pick up any loads on the way whose destination floor is within the zone range of the elevator
@@ -20,7 +21,7 @@ class DestinationDispatch(ElevatorAlgorithm):
 
     @property
     def pending_loads(self) -> List[Load]:
-        return list(filter(lambda x: x.initial_floor not in {y.initial_floor for y in self.attended_to.values()}, super().pending_loads))
+        return list(filter(lambda x: x.id not in self.attended_to, super().pending_loads))
 
     @property
     def zone_range(self):

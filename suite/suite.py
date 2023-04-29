@@ -147,7 +147,7 @@ class TestSuite:
 
         total_iterations = sum(x.total_iterations for x in self.tests)
         failed_iterations = len(self.did_not_complete)
-        successful_iterations = sum(len(x[0]) for x in self.results.values())
+        successful_iterations = sum(len(x[1]) for x in self.results.values())
 
         final_fmt.append(f'Total iterations: {total_iterations}')
         final_fmt.append(f'Failed iterations: {failed_iterations}')
