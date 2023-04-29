@@ -20,7 +20,7 @@ class DestinationDispatch(ElevatorAlgorithm):
 
     @property
     def pending_loads(self) -> List[Load]:
-        return list(filter(lambda x: x.id not in self.attended_to.keys(), super().pending_loads))
+        return list(filter(lambda x: x.initial_floor not in {y.initial_floor for y in self.attended_to.values()}, super().pending_loads))
 
     @property
     def zone_range(self):
@@ -37,7 +37,7 @@ class DestinationDispatch(ElevatorAlgorithm):
             # there is load, go to closest
             destination_floor = sorted(
                 elevator.loads,
-                key=lambda x: abs(x.initial_floor - elevator.current_floor),
+                key=lambda x: abs(x.destination_floor - elevator.current_floor),
             )[0].destination_floor
         else:
             available_loads = self.pending_loads
@@ -65,15 +65,14 @@ class DestinationDispatch(ElevatorAlgorithm):
 
         return False
 
-    def on_elevator_move(self, elevator: Elevator):
-        if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
+    def on_load_unload(self, load, elevator: Elevator):
+        if len(elevator.loads) == 0 and elevator.id in self.attended_to:
             del self.attended_to[elevator.id]
 
     def on_load_load(self, load, elevator):
         if len(elevator.loads) == 1:
             # First load, reset destination
             elevator._destination = self.get_new_destination(elevator)
-
 
 __name__ = 'Destination Dispatch'
 __algorithm__ = DestinationDispatch

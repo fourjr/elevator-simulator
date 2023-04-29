@@ -144,8 +144,11 @@ class TestSuite:
         final_fmt.append('=============')
         final_fmt.append('Test Complete')
         final_fmt.append('=============')
+
         total_iterations = sum(x.total_iterations for x in self.tests)
         failed_iterations = len(self.did_not_complete)
+        successful_iterations = sum(len(x[0]) for x in self.results.values())
+
         final_fmt.append(f'Total iterations: {total_iterations}')
         final_fmt.append(f'Failed iterations: {failed_iterations}')
         if failed_iterations > 0:
@@ -153,7 +156,7 @@ class TestSuite:
             for n_iter, test in self.did_not_complete:
                 final_fmt.append(f'  - {test.name}_{test.algorithm_name}_{n_iter}')
 
-        final_fmt.append(f'Successful iterations: {total_iterations - failed_iterations}')
+        final_fmt.append(f'Successful iterations: {successful_iterations}')
 
         if self.results:
             for settings, results in sorted(self.results.values(), key=lambda x: x[1].ticks.mean):
