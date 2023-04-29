@@ -1,6 +1,7 @@
 """Run a test suite simulating a busy office day"""
 import sys
 import time
+from constants import Infinity
 from models import Load
 from models import ElevatorAlgorithm
 
@@ -46,7 +47,6 @@ if __name__ == '__main__':
                     name='Morning',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    speed=1000,
                     floors=50,
                     num_passengers=100,
                     num_elevators=8,
@@ -58,7 +58,6 @@ if __name__ == '__main__':
                     name='Evening',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    speed=1000,
                     floors=50,
                     num_passengers=100,
                     num_elevators=8,

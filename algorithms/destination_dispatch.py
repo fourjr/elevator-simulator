@@ -4,7 +4,15 @@ from models import ElevatorAlgorithm, Elevator, Load
 
 
 class DestinationDispatch(ElevatorAlgorithm):
-    """An algorithm that uses"""
+    """An algorithm that uses the destination floor
+
+    The zone range of the elevator is defined by the first load it picks up.
+    It is a +- floor range calculated by the load_floor_ratio
+
+    1. Service the closest load
+    2. Pick up any loads on the way whose destination floor is within the zone range of the elevator
+    3. Repeat step 1 once we run out of loads
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

@@ -2,8 +2,14 @@ from models import Elevator, ElevatorAlgorithm
 
 
 class ElevatorAlgorithmScatter(ElevatorAlgorithm):
+    """A scatter algorithm (randomised loads)
+
+    1. Service a random load
+    2. Pick up any loads on the way, indifferent of direction
+    3. Repeat step 1 once we run out of loads
+    """
     def get_new_destination(self, elevator: Elevator):
-        """Gets a new destination for an elevator using the random strategy
+        """Gets a new destination for an elevator
 
         elevator: Elevator
             The elevator to get a new destination for

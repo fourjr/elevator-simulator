@@ -8,7 +8,7 @@ import dataclasses
 import sys
 import json
 
-from suite import TestSettings, TestSuite
+from suite import TestSettings, TestSuite, Load
 
 
 if __name__ == '__main__':
@@ -57,6 +57,17 @@ if __name__ == '__main__':
         if not all(k in test for k in required_fields):
             raise KeyError(f'Each test data must have all of the following keys: {", ".join(required_fields)}')
 
+        # handle loads
+        if 'loads' in test:
+            loads = test.pop('loads')
+            if not isinstance(loads, list):
+                raise TypeError(f'Loads must be a list of dictionaries, got {type(loads)}')
+
+            for load in loads:
+                if not isinstance(load, dict):
+                    raise TypeError(f'Loads must be a list of dictionaries, got {type(load)}')
+
+            test['loads'] = map(Load, test['loads'])
         # create a test settings object for the suite to handle
         tests.append(TestSettings(**test))
 

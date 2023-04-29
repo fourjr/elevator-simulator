@@ -1,21 +1,24 @@
-from typing import List
-from algorithms.scan import ElevatorAlgorithmSCAN
+from algorithms.look import ElevatorAlgorithmLOOK
 from constants import Direction
 from models import Elevator
 from utils import split_array
 
 
-class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
-    """The standard elevator algorithm"""
+class ElevatorAlgorithmNStepLOOK(ElevatorAlgorithmLOOK):
+    """The N-Step SCAN elevator algorithm
+
+    Each elevator is assigned a unique zone of floors.
+
+    1. Service the closest load whose initial floor is within the zone
+    2. Pick up any loads on the way, travelling the same direction and in the zone
+    3. Reverse direction upon reaching the top or bottom
+    4. Repeat step 1 once we run out of loads
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.num_zones = len(self.elevators)
         self.zones = self.calculate_zones()
-
-    # @property
-    # def pending_loads(self) -> List['Load']:
-    #     return [load for load in self.loads if load.elevator is None]
 
     def calculate_zones(self):
         if len(self.elevators) == 0:
@@ -54,15 +57,18 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
                 self.current_direction[elevator.id] = None
                 return None
 
-            go_to = sorted(available_loads, key=lambda x: x.tick_created)[0]
-            self.attended_to[elevator.id] = go_to.initial_floor
-            destination_floor = go_to.initial_floor
+            go_to = sorted(available_loads, key=lambda x: abs(x.initial_floor - x.current_floor))[0]
+            destination_floor = self.attended_to[elevator.id] = go_to.initial_floor
             self.current_direction[elevator.id] = None
 
         if self.current_direction.get(elevator.id) is None:
             self._calculate_direction(elevator, destination_floor)
 
         return destination_floor
+
+    def pre_load_check(self, load, elevator: Elevator):
+        elevator_index = self.elevators.index(elevator)
+        return load.initial_floor in self.zones[elevator_index] and super().pre_load_check(load, elevator)
 
     def on_elevator_added(self, elevator: Elevator):
         self.calculate_zones()
@@ -81,5 +87,5 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
             self.current_direction[elevator.id] = Direction.UP
 
 
-__name__ = 'NStepSCAN'
-__algorithm__ = ElevatorAlgorithmNStepSCAN
+__name__ = 'NStepLOOK'
+__algorithm__ = ElevatorAlgorithmNStepLOOK

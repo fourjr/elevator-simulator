@@ -10,7 +10,9 @@ import traceback
 from typing import List, Tuple
 from multiprocessing import Queue, JoinableQueue
 
-from constants import Constants, LogLevel, LogOrigin
+import colorama
+
+from constants import Constants, Infinity, LogLevel, LogOrigin
 from errors import TestTimeout
 from models import (
     CombinedStats,
@@ -59,6 +61,9 @@ class TestStats:
             data.pop('raw')
         return data
 
+    def __repr__(self) -> str:
+        return f'<TestStats size={len(self)}>'
+
 
 @dataclass
 class TestSettings:
@@ -68,8 +73,9 @@ class TestSettings:
         Name of the test
     seed: int
         Seed for the random number generator
-    speed: int
+    speed: Optional[int | Infinity]
         Speed of the simulation in relative ticks # TODO: improve explanation
+        Default: Infinity
     floors: int
         Number of floors in the building
     num_elevators: int
@@ -88,17 +94,21 @@ class TestSettings:
         Function to call to initialize the algorithm
     """
 
+    id: int = field(init=False)
     name: str
     seed: int
-    speed: int
     floors: int
     num_elevators: int
     num_passengers: int
     algorithm_name: str
     total_iterations: int
     max_load: int
+    speed: int | Infinity = Infinity
     loads: List[Load] = field(default_factory=list)
     init_function: callable = None
+
+    def __post_init__(self):
+        self.id = hash((self.name, self.algorithm_name, self.seed))
 
     def init_passengers(self, rnd: random.Random):
         for _ in range(self.num_passengers):
@@ -115,7 +125,7 @@ class TestSettings:
             'name': self.name,
             'algorithm_name': self.algorithm_name,
             'seed': self.seed,
-            'speed': self.speed,
+            'speed': self.speed if self.speed != Infinity else 'Infinity',
             'floors': self.floors,
             'num_elevators': self.num_elevators,
             'num_loads': len(self.loads),
@@ -123,11 +133,11 @@ class TestSettings:
         }
 
     def __hash__(self) -> int:
-        return hash((self.name, self.algorithm_name, self.seed))
+        return hash(self.id)
 
 
 class TestSuiteConsumer(ElevatorManager, mp.Process):
-    def __init__(self, in_queue, out_queue, error_queue, export_queue, log_queue):
+    def __init__(self, in_queue, out_queue, error_queue, export_queue, log_queue, log_levels):
         self.algorithms = load_algorithms()
         super().__init__(
             self,
@@ -142,6 +152,7 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
         self.error_queue = error_queue
         self.export_queue = export_queue
         self.log_queue = log_queue
+        self.log_levels = log_levels
 
         self._process = mp.Process(target=self.process_loop, daemon=True)
 
@@ -281,7 +292,8 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
         self.log_message(LogOrigin.SIMULATION, level, message)
 
     def log_message(self, origin, level, message):
-        self.log_queue.put((origin, level, message))
+        if level >= self.log_levels[origin]:
+            self.log_queue.put((origin, level, message))
 
     def __getstate__(self):
         obj = self.__dict__.copy()
@@ -325,7 +337,12 @@ class BackgroundProcess(mp.Process):
                     else:
                         del self.consumers[name]
                         consumer = TestSuiteConsumer(
-                            self.in_queue, self.out_queue, self.error_queue, self.export_queue, self.log_queue
+                            self.in_queue,
+                            self.out_queue,
+                            self.error_queue,
+                            self.export_queue,
+                            self.log_queue,
+                            self.log_levels,
                         )
                         consumer.start()
                         self.consumers[consumer.name] = consumer
@@ -443,6 +460,7 @@ class TestSuite:
                     self.error_queue,
                     self.export_queue if self.export_artefacts else None,
                     self.log_queue,
+                    self.log_levels,
                 )
                 self.consumers[consumer.name] = consumer
 
@@ -470,10 +488,9 @@ class TestSuite:
                     if isinstance(stats, Exception):
                         self.did_not_complete.append((n_iter, settings))
                     else:
-                        if settings not in self.results:
-                            self.results[settings] = (settings, TestStats())
-
-                        self.results[settings][1].append(stats)
+                        if settings.id not in self.results:
+                            self.results[settings.id] = (settings, TestStats())
+                        self.results[settings.id][1].append(stats)
 
             self.did_not_complete.sort(key=lambda x: ((x[1].name, x[1].algorithm_name, x[0])))
             self.save_results()
@@ -488,6 +505,7 @@ class TestSuite:
 
     def format_results(self):
         """Formats the results for printing"""
+        colorama.init()
         test_rows = {}
         final_fmt = []
 
@@ -506,7 +524,7 @@ class TestSuite:
         final_fmt.append(f'Successful iterations: {total_iterations - failed_iterations}')
 
         if self.results:
-            for settings, results in sorted(self.results.values(), key=lambda x: x[0].name):
+            for settings, results in sorted(self.results.values(), key=lambda x: x[1].ticks.mean):
                 fmt = (
                     settings.algorithm_name,
                     str(len(results)),
@@ -523,12 +541,12 @@ class TestSuite:
             all_rows = [x for y in test_rows.values() for x in y]
             maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*all_rows)]
 
-        final_fmt.append('')
-        for test_fmt in test_rows.values():
-            test_fmt.insert(1, tuple('-' * (maxlens[i] - 2) for i in range(len(maxlens))))
-            for row in test_fmt:
-                final_fmt.append(''.join(f'{x:<{maxlens[i]}}' for i, x in enumerate(row)))
             final_fmt.append('')
+            for test_fmt in test_rows.values():
+                test_fmt.insert(1, tuple('-' * (maxlens[i] - 2) for i in range(len(maxlens))))
+                for row in test_fmt:
+                    final_fmt.append(''.join(f'{x:<{maxlens[i]}}' for i, x in enumerate(row)))
+                final_fmt.append('')
 
         return '\n'.join(final_fmt)
 

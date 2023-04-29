@@ -17,7 +17,7 @@ if __name__ == '__main__':
     options = {
         'max_processes': None,
         'include_raw_stats': False,
-        'export_artefacts': False,
+        'export_artefacts': True,
     }
 
     tests = []
@@ -31,7 +31,6 @@ if __name__ == '__main__':
                     name='Busy',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    speed=1000,
                     floors=80,
                     num_elevators=16,
                     num_passengers=1600,
@@ -42,7 +41,6 @@ if __name__ == '__main__':
                     name='Slow',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    speed=1000,
                     floors=10,
                     num_elevators=2,
                     num_passengers=100,

@@ -47,3 +47,7 @@ class Constants:
     DEFAULT_ALGORITHM = 'SCAN'
     DEFAULT_FLOORS = 10
     MAX_PROCESSES = 3
+
+
+class Infinity:
+    pass

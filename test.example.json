@@ -9,7 +9,6 @@
             "algorithm_name": "FCFS",
             "total_iterations": 10,
             "seed": 20836,
-            "speed": 500,
             "floors": 50,
             "num_elevators": 8,
             "num_passengers": 1000,

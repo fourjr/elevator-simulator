@@ -2,7 +2,12 @@ from models import ElevatorAlgorithm, Elevator
 
 
 class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
-    """The standard elevator algorithm"""
+    """The standard elevator algorithm
+
+    1. Service the first load in the queue
+    2. Pick up any other loads on the same floor
+    3. Repeat step 1 once we run out of loads
+    """
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
