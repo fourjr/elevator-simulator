@@ -5,7 +5,7 @@ from utils import split_array
 
 
 class ElevatorAlgorithmNStepLOOK(ElevatorAlgorithmLOOK):
-    """The N-Step SCAN elevator algorithm
+    """The N-Step LOOK elevator algorithm
 
     Each elevator is assigned a unique zone of floors.
 
