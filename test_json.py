@@ -8,7 +8,8 @@ import dataclasses
 import sys
 import json
 
-from suite import TestSettings, TestSuite, Load
+from suite import TestSettings, TestSuite
+from models import Load
 
 
 if __name__ == '__main__':

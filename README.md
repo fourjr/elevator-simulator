@@ -19,7 +19,7 @@ Both the GUI and the Test Suite control the same managers and algorithms in the 
 | File | Description |
 | --- | --- |
 | [app.py](/app.py) | GUI handler |
-| [suite.py](/suite.py) | Test suite |
+| [suite](/suite) | Test suite |
 | [models](/models) | Data models for custom classes |
 | [constants.py](/constants.py) | Various enums and constants |
 | [utils.py](/utils.py) | Utility functions |

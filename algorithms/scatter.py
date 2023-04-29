@@ -8,6 +8,7 @@ class ElevatorAlgorithmScatter(ElevatorAlgorithm):
     2. Pick up any loads on the way, indifferent of direction
     3. Repeat step 1 once we run out of loads
     """
+
     def get_new_destination(self, elevator: Elevator):
         """Gets a new destination for an elevator
 

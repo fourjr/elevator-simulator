@@ -44,7 +44,7 @@ class Unicode:
 
 
 class Constants:
-    DEFAULT_ALGORITHM = 'SCAN'
+    DEFAULT_ALGORITHM = 'LOOK'
     DEFAULT_FLOORS = 10
     MAX_PROCESSES = 3
 

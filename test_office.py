@@ -1,7 +1,6 @@
 """Run a test suite simulating a busy office day"""
 import sys
 import time
-from constants import Infinity
 from models import Load
 from models import ElevatorAlgorithm
 
