@@ -1,6 +1,4 @@
-"""Run a test suite simulating a busy office day
-"""
-import random
+"""Run a test suite simulating a busy office day"""
 import sys
 import time
 from models import Load

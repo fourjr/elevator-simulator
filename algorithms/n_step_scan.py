@@ -1,3 +1,4 @@
+from typing import List
 from algorithms.scan import ElevatorAlgorithmSCAN
 from constants import Direction
 from models import Elevator
@@ -11,6 +12,10 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
         super().__init__(*args, **kwargs)
         self.num_zones = len(self.elevators)
         self.zones = self.calculate_zones()
+
+    # @property
+    # def pending_loads(self) -> List['Load']:
+    #     return [load for load in self.loads if load.elevator is None]
 
     def calculate_zones(self):
         if len(self.elevators) == 0:
@@ -74,9 +79,6 @@ class ElevatorAlgorithmNStepSCAN(ElevatorAlgorithmSCAN):
             self.current_direction[elevator.id] = Direction.DOWN
         elif elevator.current_floor == self.zones[elevator_index][0]:  # first floor
             self.current_direction[elevator.id] = Direction.UP
-
-        if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
-            del self.attended_to[elevator.id]
 
 
 __name__ = 'NStepSCAN'

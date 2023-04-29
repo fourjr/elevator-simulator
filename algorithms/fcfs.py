@@ -1,5 +1,4 @@
-from typing import List
-from models import ElevatorAlgorithm, Elevator, Load
+from models import ElevatorAlgorithm, Elevator
 
 
 class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
@@ -7,12 +6,7 @@ class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._pending_loads = list()
         self.attending_to = {}
-
-    @property
-    def pending_loads(self) -> List[Load]:
-        return self._pending_loads
 
     def get_new_destination(self, elevator: Elevator):
         """Gets a new destination for an elevator using the knuth strategy
@@ -49,11 +43,7 @@ class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
             # First load, reset destination
             elevator._destination = self.get_new_destination(elevator)
 
-        if load in self.pending_loads:
-            self.pending_loads.remove(load)
-
-    def on_load_added(self, load):
-        self.pending_loads.append(load)
+        super().on_load_load(load, elevator)
 
 
 __name__ = 'FCFS'

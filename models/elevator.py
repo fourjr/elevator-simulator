@@ -65,7 +65,7 @@ class Elevator:
             if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(
                 load, self
             ):
-                self.manager.WriteToLog(LogLevel.INFO, f'{load.id} unloaded from elevator {self.id}')
+                self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} unloaded from elevator {self.id}')
                 self.manager.algorithm.time_in_lift.append(
                     self.manager.algorithm.tick_count - load.enter_lift_tick + 1
                 )

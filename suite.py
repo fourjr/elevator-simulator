@@ -122,22 +122,26 @@ class TestSettings:
             'total_iterations': iteration_count or self.total_iterations,
         }
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.algorithm_name, self.seed))
+
 
 class TestSuiteConsumer(ElevatorManager, mp.Process):
-    def __init__(self, in_queue, out_queue, error_queue, export_queue):
+    def __init__(self, in_queue, out_queue, error_queue, export_queue, log_queue):
         self.algorithms = load_algorithms()
         super().__init__(
             self,
             None,
             self.algorithms[Constants.DEFAULT_ALGORITHM],
             gui=False,
-            log_func=self.log_message,
+            log_func=self.log_message_simulation,
         )
         self._running = False
         self.in_queue = in_queue
         self.out_queue = out_queue
         self.error_queue = error_queue
         self.export_queue = export_queue
+        self.log_queue = log_queue
 
         self._process = mp.Process(target=self.process_loop, daemon=True)
 
@@ -171,9 +175,6 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
                 self.reset(algo)
                 self.algorithm.rnd = random.Random((settings.seed + n_iter) % 2 ** 32)
 
-                if settings.init_function is not None:
-                    settings.init_function(self.algorithm)
-
                 self.set_speed(settings.speed)
                 self.set_floors(settings.floors)
                 self.set_max_load(settings.max_load)
@@ -190,32 +191,36 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
                 for load in settings.loads:
                     self.algorithm.add_load(load)
 
+                if settings.init_function is not None:
+                    settings.init_function(self.algorithm)
+
                 # save
                 if self.export_queue is not None:
-                    name = f'{settings.name}_{n_iter}'
+                    name = f'{settings.name}_{settings.algorithm_name}_{n_iter}'
                     self.export_queue.put((name, copy.deepcopy(self.algorithm)))
 
                 self.active = True
                 self.log_message(
-                    LogLevel.INFO,
-                    f'{self.name} START SIMULATION: {n_iter=} {settings.name=}',
                     LogOrigin.TEST,
+                    LogLevel.TRACE,
+                    f'{self.name} START SIMULATION: {n_iter=} {settings.name=} {settings.algorithm_name=}',
                 )
 
                 try:
                     self.start_simulation()
                 except TestTimeout as e:
                     # continue with next simulation
+                    self.out_queue.put(((n_iter, settings), e))
                     self.log_message(
-                        LogLevel.WARNING,
-                        f'{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                         LogOrigin.TEST,
+                        LogLevel.WARNING,
+                        f'{self.name} SKIP SIMULATION (TIMEOUT): {n_iter=} {settings.name=} {settings.algorithm_name=}',
                     )
                 else:
                     self.log_message(
-                        LogLevel.INFO,
-                        f'{self.name} END SIMULATION: {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                         LogOrigin.TEST,
+                        LogLevel.TRACE,
+                        f'{self.name} END SIMULATION: {n_iter=} {settings.name=}  {settings.algorithm_name=}',
                     )
                     self.out_queue.put(((n_iter, settings), self.algorithm.stats))
 
@@ -233,17 +238,18 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
             if self.current_simulation is not None:
                 n_iter, settings = self.current_simulation
                 self.log_message(
-                    LogLevel.ERROR,
-                    f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {self.algorithm.tick_count=}',
                     LogOrigin.TEST,
+                    LogLevel.ERROR,
+                    f'{self.name} ERROR SIMULATION: {n_iter=} {settings.name=} {settings.algorithm_name=}\n\n{e.formatted_exception}',
                 )
             else:
                 self.log_message(
-                    LogLevel.ERROR,
-                    f'{self.name} ERROR SIMULATION: {self.algorithm.tick_count=}',
                     LogOrigin.TEST,
+                    LogLevel.ERROR,
+                    f'{self.name} ERROR SIMULATION\n\n{e.formatted_exception}',
                 )
 
+            self.out_queue.put(((n_iter, settings), e))
             self.error_queue.put((self.name, e))
 
     def on_tick(self):
@@ -255,9 +261,9 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
             self.end_simulation()
             n_iter, settings = self.current_simulation
             self.log_message(
-                LogLevel.ERROR,
-                f'{self.name=} TIMEOUT: {n_iter=} {settings.name=}',
                 LogOrigin.TEST,
+                LogLevel.ERROR,
+                f'{self.name=} TIMEOUT: {n_iter=} {settings.name=} {settings.algorithm_name=}',
             )
             raise TestTimeout(self.name, n_iter, settings)
 
@@ -271,9 +277,11 @@ class TestSuiteConsumer(ElevatorManager, mp.Process):
     def end_simulation(self):
         self._running = False
 
-    def log_message(self, level: LogLevel, message, origin=LogOrigin.SIMULATION):
-        if level not in (LogLevel.DEBUG, LogLevel.TRACE, LogLevel.INFO) or origin == LogOrigin.TEST:
-            print(level.name, message)
+    def log_message_simulation(self, level, message):
+        self.log_message(LogOrigin.SIMULATION, level, message)
+
+    def log_message(self, origin, level, message):
+        self.log_queue.put((origin, level, message))
 
     def __getstate__(self):
         obj = self.__dict__.copy()
@@ -288,16 +296,20 @@ class BackgroundProcess(mp.Process):
         out_queue,
         error_queue,
         export_queue,
+        log_queue,
         consumers: List[TestSuiteConsumer],
         close_event,
+        log_levels,
     ):
         super().__init__()
         self.in_queue = in_queue
         self.out_queue = out_queue
         self.error_queue = error_queue
         self.export_queue = export_queue
+        self.log_queue = log_queue
         self.consumers = consumers
         self.close_event = close_event
+        self.log_levels = log_levels
 
     def is_closed(self):
         return self.close_event.is_set()
@@ -307,36 +319,48 @@ class BackgroundProcess(mp.Process):
             while not self.is_closed():
                 while not self.is_closed():
                     try:
-                        name, e = self.error_queue.get(timeout=0.1)
+                        name, e = self.error_queue.get(timeout=0.01)
                     except queue.Empty:
                         break
                     else:
                         del self.consumers[name]
                         consumer = TestSuiteConsumer(
-                            self.in_queue,
-                            self.out_queue,
-                            self.error_queue,
-                            self.export_queue,
+                            self.in_queue, self.out_queue, self.error_queue, self.export_queue, self.log_queue
                         )
                         consumer.start()
                         self.consumers[consumer.name] = consumer
 
-                        print(f'[E_HANDLER] INFO {name} died, restarting as {consumer.name}')
-                        print(e.formatted_exception)
+                        self.log_queue.put(
+                            (LogOrigin.ERROR_HANDLER, LogLevel.INFO, f'{name} died, restarting as {consumer.name}')
+                        )
                         self.error_queue.task_done()
 
                 if self.export_queue is not None:
                     while not self.is_closed():
                         try:
-                            name, algo = self.export_queue.get(timeout=0.2)
+                            name, algo = self.export_queue.get(timeout=0.01)
                         except queue.Empty:
                             break
                         else:
                             dt = datetime.now().isoformat().replace(':', '-')
                             fn = f'{dt}_{name}.esi'
                             save_algorithm(algo, fn)
-                            print(f'[F_HANDLER] INFO {name} exported and saved')
+                            self.log_queue.put(
+                                (LogOrigin.FILE_HANDLER, LogLevel.TRACE, f'{name} exported to {fn}')
+                            )
                             self.export_queue.task_done()
+
+                while not self.is_closed():
+                    try:
+                        origin, level, message = self.log_queue.get(timeout=0.01)
+                    except queue.Empty:
+                        break
+                    else:
+                        if level >= self.log_levels[origin]:
+                            print(f'[{origin.name}] [{level.name[0]}] {message}')
+
+                        self.log_queue.task_done()
+
         except KeyboardInterrupt:
             return
 
@@ -356,18 +380,30 @@ class TestSuite:
         **include_raw_stats: bool
             Default: True
             Whether to include the raw stats in the output
+        **log_levels: Dict[LogOrigin, List[LogLevel]]
         """
         self.tests: List[TestSettings] = tests
         self.in_queue: JoinableQueue[Tuple[int, TestSettings]] = JoinableQueue()
-        self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats]] = Queue()
+        self.out_queue: Queue[Tuple[Tuple[int, TestSettings], SimulationStats | Exception]] = Queue()
         self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
         self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
+        self.log_queue: JoinableQueue[Tuple[LogOrigin, LogLevel, str]] = JoinableQueue()
 
         self.close_event = mp.Event()
         self.export_artefacts = options.pop('export_artefacts', True)
         self.include_raw_stats = options.pop('include_raw_stats', True)
+        self.log_levels = options.pop(
+            'log_levels',
+            {
+                LogOrigin.SIMULATION: LogLevel.WARNING,
+                LogOrigin.TEST: LogLevel.INFO,
+                LogOrigin.ERROR_HANDLER: LogLevel.INFO,
+                LogOrigin.FILE_HANDLER: LogLevel.INFO,
+            },
+        )
 
         self.results: dict[str, Tuple[TestSettings, TestStats]] = {}
+        self.did_not_complete: List[TestSettings] = []
 
         hard_max_processes = min(mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests))
 
@@ -385,8 +421,10 @@ class TestSuite:
             self.out_queue,
             self.error_queue,
             self.export_queue if self.export_artefacts else None,
+            self.log_queue,
             self.consumers,
             self.close_event,
+            self.log_levels,
         )
 
     def init_tests(self):
@@ -404,8 +442,11 @@ class TestSuite:
                     self.out_queue,
                     self.error_queue,
                     self.export_queue if self.export_artefacts else None,
+                    self.log_queue,
                 )
                 self.consumers[consumer.name] = consumer
+
+            self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
 
             self.background_process.start()
             for p in self.consumers.values():
@@ -418,6 +459,24 @@ class TestSuite:
                     pass
                 else:
                     break
+
+            self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'All tests finished, gathering results'))
+            while True:
+                try:
+                    (n_iter, settings), stats = self.out_queue.get(block=False)
+                except queue.Empty:
+                    break
+                else:
+                    if isinstance(stats, Exception):
+                        self.did_not_complete.append((n_iter, settings))
+                    else:
+                        if settings not in self.results:
+                            self.results[settings] = (settings, TestStats())
+
+                        self.results[settings][1].append(stats)
+
+            self.did_not_complete.sort(key=lambda x: ((x[1].name, x[1].algorithm_name, x[0])))
+            self.save_results()
         except Exception:
             self.close(force=True)
             raise
@@ -425,24 +484,26 @@ class TestSuite:
             self.close(force=True)
             raise
         else:
-            print('All tests finished, gathering results')
-            while True:
-                try:
-                    (_, settings), stats = self.out_queue.get(block=False)
-                except queue.Empty:
-                    break
-                else:
-                    if settings.name not in self.results:
-                        self.results[settings.name] = (settings, TestStats())
-
-                    self.results[settings.name][1].append(stats)
-            self.save_results()
             self.close()
 
     def format_results(self):
         """Formats the results for printing"""
         test_rows = {}
         final_fmt = []
+
+        final_fmt.append('=============')
+        final_fmt.append('Test Complete')
+        final_fmt.append('=============')
+        total_iterations = sum(x.total_iterations for x in self.tests)
+        failed_iterations = len(self.did_not_complete)
+        final_fmt.append(f'Total iterations: {total_iterations}')
+        final_fmt.append(f'Failed iterations: {failed_iterations}')
+        if failed_iterations > 0:
+            final_fmt.append('Failed tests:')
+            for n_iter, test in self.did_not_complete:
+                final_fmt.append(f'  - {test.name}_{test.algorithm_name}_{n_iter}')
+
+        final_fmt.append(f'Successful iterations: {total_iterations - failed_iterations}')
 
         if self.results:
             for settings, results in sorted(self.results.values(), key=lambda x: x[0].name):
@@ -459,12 +520,14 @@ class TestSuite:
 
                 test_rows[settings.name].append(fmt)
 
-            maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*test_rows.values())]
+            all_rows = [x for y in test_rows.values() for x in y]
+            maxlens = [max(len(str(x)) + 2 for x in col) for col in zip(*all_rows)]
 
         final_fmt.append('')
-        for row in test_rows.values():
-            row.insert(1, tuple('-' * (maxlens[i] - 2) for i in range(len(maxlens))))
-            final_fmt.append('  '.join(f'{x:<{maxlens[i]}}' for i, x in enumerate(row)))
+        for test_fmt in test_rows.values():
+            test_fmt.insert(1, tuple('-' * (maxlens[i] - 2) for i in range(len(maxlens))))
+            for row in test_fmt:
+                final_fmt.append(''.join(f'{x:<{maxlens[i]}}' for i, x in enumerate(row)))
             final_fmt.append('')
 
         return '\n'.join(final_fmt)
@@ -486,11 +549,11 @@ class TestSuite:
         with open(fn, 'w') as f:
             json.dump(data, f, indent=4)
 
-        print(f'Saved results to {fn}')
+        self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, f'Saved results to {fn}'))
 
     def close(self, *, force=False):
-        self.close_event.set()
         if force:
+            self.close_event.set()
             self.background_process.terminate()
             self.background_process.join()
 
@@ -500,12 +563,16 @@ class TestSuite:
             self.out_queue.cancel_join_thread()
             self.error_queue.cancel_join_thread()
             self.export_queue.cancel_join_thread()
+            self.log_queue.cancel_join_thread()
         else:
-            self.background_process.join()
             self.export_queue.join()
+            self.log_queue.join()
+            self.close_event.set()
+            self.background_process.join()
 
         self.in_queue.close()
         self.out_queue.close()
-        self.export_queue.close()
         self.error_queue.close()
+        self.export_queue.close()
+        self.log_queue.close()
         self.background_process.close()

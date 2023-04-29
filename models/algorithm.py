@@ -234,7 +234,7 @@ class ElevatorAlgorithm:
                             continue
 
                         self.manager.WriteToLog(
-                            LogLevel.INFO,
+                            LogLevel.TRACE,
                             f'Load {load.id} added to elevator {elevator.id}',
                         )
                         loads_to_add.append(load)

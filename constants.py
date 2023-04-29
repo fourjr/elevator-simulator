@@ -33,6 +33,8 @@ class LogLevel(IntEnum):
 class LogOrigin(IntEnum):
     SIMULATION = 1
     TEST = 2
+    FILE_HANDLER = 3
+    ERROR_HANDLER = 4
 
 
 class Unicode:

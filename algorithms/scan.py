@@ -84,7 +84,13 @@ class ElevatorAlgorithmSCAN(ElevatorAlgorithm):
         elif elevator.current_floor == 0:
             self.current_direction[elevator.id] = Direction.UP
 
-        if elevator.id in self.attended_to and elevator.current_floor == self.attended_to[elevator.id]:
+    def on_load_load(self, load: Load, elevator: Elevator):
+        if elevator.current_floor in self.attended_to.values():
+            for k in self.attended_to:
+                if self.attended_to[k] == elevator.current_floor:
+                    del self.attended_to[k]
+                    break
+        if elevator.id in self.attended_to:
             del self.attended_to[elevator.id]
 
 

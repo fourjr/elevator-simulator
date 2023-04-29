@@ -9,6 +9,7 @@
         "Segoue",
         "SPINCTRL",
         "SPINCTRLDOUBLE",
+        "tqdm",
         "wxne"
     ]
 }

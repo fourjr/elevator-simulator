@@ -29,7 +29,7 @@ class DestinationDispatch(ElevatorAlgorithm):
             # there is load, go to closest
             destination_floor = sorted(
                 elevator.loads,
-                key=lambda x: abs(x.destination_floor - elevator.current_floor),
+                key=lambda x: abs(x.initial_floor - elevator.current_floor),
             )[0].destination_floor
         else:
             available_loads = self.pending_loads
