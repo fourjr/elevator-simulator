@@ -34,6 +34,9 @@ class GeneratedStats:
             return 0
         return max(self.values)
 
+    def __len__(self):
+        return len(self.values)
+
     def __str__(self):
         return f'{self.minimum:.2f}/{self.mean:.2f}/{self.median:.2f}/{self.maximum:.2f}'
 
@@ -44,6 +47,9 @@ class GeneratedStats:
             'minimum': self.minimum,
             'maximum': self.maximum,
         }
+
+    def __repr__(self) -> str:
+        return f'<GeneratedStats size={len(self.values)}>'
 
 
 @dataclass

@@ -75,5 +75,6 @@ class DestinationDispatch(ElevatorAlgorithm):
             # First load, reset destination
             elevator._destination = self.get_new_destination(elevator)
 
+
 __name__ = 'Destination Dispatch'
 __algorithm__ = DestinationDispatch

@@ -75,6 +75,8 @@ class TestSettings:
         List of custom loads to use
     init_func: Optional[Callable[[ElevatorAlgorithm], None]
         Function to call to initialize the algorithm
+    on_tick: Optional[Callable[[ElevatorAlgorithm], None]
+        Function to call every tick
     """
 
     id: int = field(init=False)
@@ -89,6 +91,7 @@ class TestSettings:
     speed: int | Infinity = Infinity
     loads: List[Load] = field(default_factory=list)
     init_function: callable = None
+    on_tick: callable = None
 
     def __post_init__(self):
         self.id = hash((self.name, self.algorithm_name, self.seed))

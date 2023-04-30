@@ -3,7 +3,7 @@ import multiprocessing as mp
 import os
 import queue
 from datetime import datetime
-from multiprocessing import JoinableQueue, Queue
+from multiprocessing import JoinableQueue, Queue, Pool
 from typing import List, Tuple
 
 import colorama
@@ -11,7 +11,7 @@ import colorama
 from constants import LogLevel, LogOrigin
 from models import ElevatorAlgorithm, SimulationStats
 from suite import BackgroundProcess, TestStats, TestSuiteConsumer
-from utils import jq_join_timeout
+from suite.manager import run_loop
 
 
 class TestSuite:
@@ -32,11 +32,9 @@ class TestSuite:
         **log_levels: Dict[LogOrigin, List[LogLevel]]
         """
         self.tests: List['TestSettings'] = tests
-        self.in_queue: JoinableQueue[Tuple[int, 'TestSettings']] = JoinableQueue()
-        self.out_queue: Queue[Tuple[Tuple[int, 'TestSettings'], SimulationStats | Exception]] = Queue()
-        self.error_queue: JoinableQueue[Tuple[str, Exception]] = JoinableQueue()
-        self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = JoinableQueue()
-        self.log_queue: JoinableQueue[Tuple[LogOrigin, LogLevel, str]] = JoinableQueue()
+        self.mp_manager = mp.Manager()
+        self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = self.mp_manager.JoinableQueue()
+        self.log_queue: JoinableQueue[Tuple[LogOrigin, LogLevel, str]] = self.mp_manager.JoinableQueue()
 
         self.close_event = mp.Event()
         self.export_artefacts = options.pop('export_artefacts', True)
@@ -62,67 +60,49 @@ class TestSuite:
         else:
             self.max_processes = min(max_processes, hard_max_processes)
 
-        self.init_tests()
-
-        self.consumers = {}
+        self.consumers = []
         self.background_process = BackgroundProcess(
-            self.in_queue,
-            self.out_queue,
-            self.error_queue,
             self.export_queue if self.export_artefacts else None,
             self.log_queue,
-            self.consumers,
             self.close_event,
             self.log_levels,
         )
 
-    def init_tests(self):
-        """Initialises the tests and prepare for execution"""
-        for test in self.tests:
-            for i in range(test.total_iterations):
-                self.in_queue.put((i + 1, test))
-
     def start(self):
         """Starts the Test Suite"""
         try:
-            for _ in range(self.max_processes):
-                consumer = TestSuiteConsumer(
-                    self.in_queue,
-                    self.out_queue,
-                    self.error_queue,
-                    self.export_queue if self.export_artefacts else None,
-                    self.log_queue,
-                    self.log_levels,
-                )
-                self.consumers[consumer.name] = consumer
+            # for _ in range(self.max_processes):
+            # TODO: make a functioanlity where there is a list of consumers to fetch from
+            # and only be allowed to fetch free ones
+            for test in self.tests:
+                for i in range(test.total_iterations):
+                    self.consumers.append(TestSuiteConsumer(self.export_queue, self.log_queue, self.log_levels))
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
 
             self.background_process.start()
-            for p in self.consumers.values():
-                p.start()
 
-            while True:
-                try:
-                    jq_join_timeout(self.in_queue, timeout=0.1)
-                except TimeoutError:
-                    pass
-                else:
-                    break
+            args = []
+            for test in self.tests:
+                for i in range(test.total_iterations):
+                    args.append(((i + 1, test), self.consumers[i]))
+
+            with Pool(processes=self.max_processes) as pool:
+                out = pool.map_async(run_loop, args)
+
+                while not out.ready():
+                    out.wait(timeout=0.1)
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'All tests finished, gathering results'))
-            while True:
-                try:
-                    (n_iter, settings), stats = self.out_queue.get(block=False)
-                except queue.Empty:
-                    break
+
+            res = out.get(timeout=0.1)
+            for (n_iter, settings), stats in res:
+                if isinstance(stats, Exception):
+                    self.did_not_complete.append((n_iter, settings))
                 else:
-                    if isinstance(stats, Exception):
-                        self.did_not_complete.append((n_iter, settings))
-                    else:
-                        if settings.id not in self.results:
-                            self.results[settings.id] = (settings, TestStats())
-                        self.results[settings.id][1].append(stats)
+                    if settings.id not in self.results:
+                        self.results[settings.id] = (settings, TestStats())
+                    self.results[settings.id][1].append(stats)
 
             self.did_not_complete.sort(key=lambda x: ((x[1].name, x[1].algorithm_name, x[0])))
             self.save_results()
@@ -213,20 +193,21 @@ class TestSuite:
 
             # allow process to be abruptly stopped without waiting for queues to empty
             # https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues
-            self.in_queue.cancel_join_thread()
-            self.out_queue.cancel_join_thread()
-            self.error_queue.cancel_join_thread()
-            self.export_queue.cancel_join_thread()
-            self.log_queue.cancel_join_thread()
+            # self.in_queue.cancel_join_thread()
+            # self.out_queue.cancel_join_thread()
+            # self.error_queue.cancel_join_thread()
+            # self.export_queue.cancel_join_thread()
+            # self.log_queue.cancel_join_thread()
         else:
             self.export_queue.join()
             self.log_queue.join()
             self.close_event.set()
             self.background_process.join()
 
-        self.in_queue.close()
-        self.out_queue.close()
-        self.error_queue.close()
-        self.export_queue.close()
-        self.log_queue.close()
+        # self.in_queue.close()
+        # self.out_queue.close()
+        # self.error_queue.close()
+        # self.export_queue.close()
+        # self.log_queue.close()
+        self.mp_manager.shutdown()
         self.background_process.close()
