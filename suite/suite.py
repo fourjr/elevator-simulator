@@ -3,7 +3,6 @@ import multiprocessing as mp
 import os
 import queue
 import tqdm
-from tqdm.contrib.concurrent import process_map  # or thread_map
 from datetime import datetime
 from multiprocessing import JoinableQueue, Pool
 from typing import List, Tuple
@@ -99,7 +98,6 @@ class TestSuite:
             for test in self.tests:
                 for i in range(test.total_iterations):
                     args.append(((i + 1, test), self.algo_manager_pool))
-
 
             res = []
             with Pool(processes=self.max_processes) as pool:

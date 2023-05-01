@@ -1,6 +1,6 @@
 import random
 from typing import List
-from constants import Constants, LogLevel
+from constants import Constants
 from errors import BadArgument
 from models.elevator import Elevator
 from models.load import Load

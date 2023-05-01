@@ -6,7 +6,7 @@ from typing import Callable, List, Tuple
 
 import wx
 
-from constants import _InfinitySentinel, Infinity
+from constants import _InfinitySentinel
 
 
 class ElevatorManager:
