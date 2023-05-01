@@ -2,14 +2,16 @@ import json
 import multiprocessing as mp
 import os
 import queue
+import tqdm
+from tqdm.contrib.concurrent import process_map  # or thread_map
 from datetime import datetime
-from multiprocessing import JoinableQueue, Queue, Pool
+from multiprocessing import JoinableQueue, Pool
 from typing import List, Tuple
 
 import colorama
 
 from constants import LogLevel, LogOrigin
-from models import ElevatorAlgorithm, SimulationStats
+from models import ElevatorAlgorithm
 from suite import BackgroundProcess, TestStats, TestSuiteManager
 from suite.manager import ManagerPool, run_loop
 
@@ -60,7 +62,7 @@ class TestSuite:
         else:
             self.max_processes = min(max_processes, hard_max_processes)
 
-        self.algo_managers = ManagerPool(self.mp_manager)
+        self.algo_manager_pool = ManagerPool(self.mp_manager)
         self.background_process = BackgroundProcess(
             self.export_queue if self.export_artefacts else None,
             self.log_queue,
@@ -68,30 +70,57 @@ class TestSuite:
             self.log_levels,
         )
 
+    def check_log(self, bar=None):
+        while not self.close_event.is_set():
+            try:
+                origin, level, message = self.log_queue.get(timeout=0.01)
+            except queue.Empty:
+                break
+            else:
+                if level >= self.log_levels[origin]:
+                    fmt = f'[{origin.name}] [{level.name[0]}] {message}'
+                    if bar is None:
+                        print(fmt)
+                    else:
+                        bar.write(fmt)
+
+                self.log_queue.task_done()
+
     def start(self):
         """Starts the Test Suite"""
         try:
             for _ in range(self.max_processes):
-                self.algo_managers.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
+                self.algo_manager_pool.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
-
             self.background_process.start()
 
             args = []
             for test in self.tests:
                 for i in range(test.total_iterations):
-                    args.append(((i + 1, test), self.algo_managers))
+                    args.append(((i + 1, test), self.algo_manager_pool))
 
+
+            res = []
             with Pool(processes=self.max_processes) as pool:
-                out = pool.map_async(run_loop, args)
+                with tqdm.tqdm(total=len(args), dynamic_ncols=True, unit='sim') as bar:
+                    it = pool.imap_unordered(run_loop, args)
 
-                while not out.ready():
-                    out.wait(timeout=0.1)
+                    while True:
+                        try:
+                            res.append(it.next(timeout=0.1))
+                        except StopIteration:
+                            break
+                        except mp.TimeoutError:
+                            bar.update(0)
+                            continue
+                        else:
+                            bar.update()
+                        finally:
+                            self.check_log(bar)
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'All tests finished, gathering results'))
 
-            res = out.get(timeout=0.1)
             for (n_iter, settings), stats in res:
                 if isinstance(stats, Exception):
                     self.did_not_complete.append((n_iter, settings))
@@ -188,10 +217,11 @@ class TestSuite:
                 self.background_process.join()
         else:
             self.export_queue.join()
+            self.check_log()
             self.log_queue.join()
             self.close_event.set()
             self.background_process.join()
 
-        self.algo_managers.close()
+        self.algo_manager_pool.close()
         self.background_process.close()
         self.mp_manager.shutdown()

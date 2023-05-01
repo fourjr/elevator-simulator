@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass, field
 from typing import List
 
-from constants import Infinity
+from constants import _InfinitySentinel, Infinity
 from models import CombinedStats, Load
 from models.stats import SimulationStats
 
@@ -88,7 +88,7 @@ class TestSettings:
     algorithm_name: str
     total_iterations: int
     max_load: int
-    speed: int | Infinity = Infinity
+    speed: int | _InfinitySentinel = Infinity
     loads: List[Load] = field(default_factory=list)
     init_function: callable = None
     on_tick: callable = None
@@ -107,7 +107,7 @@ class TestSettings:
         return self.suite.algorithms[self.algorithm_name]
 
     def to_dict(self, iteration_count=None):
-        if isinstance(self.speed, Infinity):
+        if isinstance(self.speed, _InfinitySentinel):
             speed = 'Infinity'
         else:
             speed = self.speed

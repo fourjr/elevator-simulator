@@ -27,6 +27,7 @@ Both the GUI and the Test Suite control the same managers and algorithms in the 
 
 ### Dependencies
 - wxPython===4.2.0 ([PyPi](https://pypi.org/project/wxPython/4.2.0/), [official website](https://wxpython.org/pages/downloads/index.html))
+- tqdm===4.65.0 [test suite only] ([PyPi](https://pypi.org/project/tqdm/4.65.0/))
 
 ### Custom Algorithms
 

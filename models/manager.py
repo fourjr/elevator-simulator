@@ -6,7 +6,7 @@ from typing import Callable, List, Tuple
 
 import wx
 
-from constants import Infinity
+from constants import _InfinitySentinel, Infinity
 
 
 class ElevatorManager:
@@ -55,7 +55,7 @@ class ElevatorManager:
                     for elevator in self.algorithm.elevators:
                         self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
 
-            if self.speed != Infinity:
+            if not isinstance(self.speed, _InfinitySentinel):
                 time.sleep(1 / self.speed)
 
             # speed: 3 seconds per floor (1x)

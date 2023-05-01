@@ -164,7 +164,6 @@ class Elevator:
             self.manager.algorithm.max_load is not None
             and self.load + load.weight > self.manager.algorithm.max_load
         ):
-            print(self.load, load.weight, self.manager.algorithm.max_load)
             raise FullElevator(self.id)
 
         self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} added to elevator {self.id}')

@@ -2,6 +2,7 @@ import multiprocessing as mp
 import queue
 from datetime import datetime
 from typing import List
+from tqdm.auto import tqdm
 
 from constants import LogLevel, LogOrigin
 from suite import TestSuiteManager
@@ -42,17 +43,6 @@ class BackgroundProcess(mp.Process):
                                 (LogOrigin.FILE_HANDLER, LogLevel.TRACE, f'{name} exported to {fn}')
                             )
                             self.export_queue.task_done()
-
-                while not self.is_closed():
-                    try:
-                        origin, level, message = self.log_queue.get(timeout=0.01)
-                    except queue.Empty:
-                        break
-                    else:
-                        if level >= self.log_levels[origin]:
-                            print(f'[{origin.name}] [{level.name[0]}] {message}')
-
-                        self.log_queue.task_done()
 
         except KeyboardInterrupt:
             return
