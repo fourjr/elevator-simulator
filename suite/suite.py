@@ -10,8 +10,8 @@ import colorama
 
 from constants import LogLevel, LogOrigin
 from models import ElevatorAlgorithm, SimulationStats
-from suite import BackgroundProcess, TestStats, TestSuiteConsumer
-from suite.manager import run_loop
+from suite import BackgroundProcess, TestStats, TestSuiteManager
+from suite.manager import ManagerList, run_loop
 
 
 class TestSuite:
@@ -60,7 +60,7 @@ class TestSuite:
         else:
             self.max_processes = min(max_processes, hard_max_processes)
 
-        self.consumers = []
+        self.managers = ManagerList()
         self.background_process = BackgroundProcess(
             self.export_queue if self.export_artefacts else None,
             self.log_queue,
@@ -71,12 +71,8 @@ class TestSuite:
     def start(self):
         """Starts the Test Suite"""
         try:
-            # for _ in range(self.max_processes):
-            # TODO: make a functioanlity where there is a list of consumers to fetch from
-            # and only be allowed to fetch free ones
-            for test in self.tests:
-                for i in range(test.total_iterations):
-                    self.consumers.append(TestSuiteConsumer(self.export_queue, self.log_queue, self.log_levels))
+            for _ in range(self.max_processes):
+                self.managers.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
 
@@ -85,7 +81,8 @@ class TestSuite:
             args = []
             for test in self.tests:
                 for i in range(test.total_iterations):
-                    args.append(((i + 1, test), self.consumers[i]))
+                    args.append(((i + 1, test), self.managers))
+
 
             with Pool(processes=self.max_processes) as pool:
                 out = pool.map_async(run_loop, args)

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import itertools
 import threading
 import time
 from typing import Callable, List, Tuple
@@ -9,6 +10,7 @@ from constants import Infinity
 
 
 class ElevatorManager:
+    _id_iter = itertools.count()
     def __init__(
         self,
         parent,
@@ -26,6 +28,7 @@ class ElevatorManager:
         self.active = False
         self.is_open = True
         self.gui = gui
+        self.id = next(ElevatorManager._id_iter)
 
         if log_func is None:
             self.WriteToLog = self.parent.WriteToLog

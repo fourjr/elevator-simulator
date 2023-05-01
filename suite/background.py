@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List
 
 from constants import LogLevel, LogOrigin
-from suite import TestSuiteConsumer
+from suite import TestSuiteManager
 from utils import save_algorithm
 
 
