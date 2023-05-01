@@ -11,6 +11,7 @@ from constants import Infinity
 
 class ElevatorManager:
     _id_iter = itertools.count()
+
     def __init__(
         self,
         parent,
@@ -39,15 +40,15 @@ class ElevatorManager:
     def running(self):
         raise NotImplementedError
 
-    def on_tick(self):
+    def _on_loop(self):
         pass
 
     def loop(self):
         while self.running and self.is_open:
             if self.active:
-                self.algorithm.cycle()
+                self.algorithm.loop()
                 self.send_event()
-                self.on_tick()
+                self._on_loop()
 
                 if self.algorithm.simulation_running:
                     # only append if there are things going on
@@ -55,7 +56,7 @@ class ElevatorManager:
                         self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
 
             if self.speed != Infinity:
-                time.sleep(3 * (1 / self.speed))
+                time.sleep(1 * (1 / self.speed))
 
             # speed: 3 seconds per floor (1x)
 

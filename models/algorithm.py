@@ -81,11 +81,11 @@ class ElevatorAlgorithm:
         return True
 
     # region Event Handlers
-    def pre_tick(self):
+    def pre_loop(self):
         """Runs at the start of every tick"""
         pass
 
-    def post_tick(self):
+    def post_loop(self):
         """Runs at the end of every tick"""
         pass
 
@@ -214,38 +214,15 @@ class ElevatorAlgorithm:
         load.tick_created = self.tick_count
         self.add_load(load)
 
-    def cycle(self):
+    def loop(self):
         """Runs a cycle of the elevator algorithm"""
         # Boarding
-        self.pre_tick()
+        self.pre_loop()
         for elevator in self.elevators:
-            if elevator.load <= self.max_load:
-                for load in self.loads:
-                    # add to elevator
-                    if load.elevator is None and load.initial_floor == elevator.current_floor:
-                        if elevator.load + load.weight > self.max_load:
-                            continue
-                        if not self.pre_load_check(load, elevator):
-                            self.manager.WriteToLog(
-                                LogLevel.DEBUG,
-                                f'Load {load.id} failed preload for elevator {elevator.id}',
-                            )
-                            continue
-
-                        self.manager.WriteToLog(
-                            LogLevel.TRACE,
-                            f'Load {load.id} added to elevator {elevator.id}',
-                        )
-                        load.elevator = elevator
-                        load.enter_lift_tick = self.tick_count
-                        wait_time = self.tick_count - load.tick_created
-                        self.wait_times.append(wait_time)
-                        elevator.add_load(load)
-
-            elevator.cycle()
+            elevator.loop()
 
         self.tick_count += 1
-        self.post_tick()
+        self.post_loop()
 
     def __getstate__(self):
         state = self.__dict__.copy()

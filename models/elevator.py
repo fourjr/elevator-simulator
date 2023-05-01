@@ -1,7 +1,9 @@
 from typing import List
 
-from constants import Direction, LogLevel
+from constants import ActionType, Direction, LogLevel
 from errors import FullElevator
+from models import ActionManager
+from models.action import Action
 
 
 class Elevator:
@@ -12,6 +14,7 @@ class Elevator:
         self.loads: List['Load'] = []
         self.attributes: List[str] = attributes or []
         self.enabled: bool = True
+        self.action_manager = ActionManager()
 
         self._destination: int = self.manager.algorithm.get_new_destination(self)
 
@@ -56,33 +59,30 @@ class Elevator:
         )
         self._current_floor += increment
 
-        to_unload = []
-        for load in self.loads:
-            load.current_floor = self.current_floor
-            self.manager.on_load_move(load)
-
-            # unloading off elevator
-            if load.destination_floor == self.current_floor and self.manager.algorithm.pre_unload_check(
-                load, self
-            ):
-                self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} unloaded from elevator {self.id}')
-                self.manager.algorithm.time_in_lift.append(
-                    self.manager.algorithm.tick_count - load.enter_lift_tick + 1
-                )
-                load.elevator = None
-                to_unload.append(load)
-
-        for load in to_unload:
-            self.loads.remove(load)
-            self.manager.algorithm.remove_load(load)
-
-            self.manager.algorithm.on_load_unload(load, self)
-
-    def cycle(self):
-        """Runs a cycle of the elevator"""
+    def loop(self):
         if not self.enabled:
             return
 
+        while True:
+            # keep running until we reach an add tick
+            action = self.action_manager.get()
+            match action.action_type:
+                case ActionType.ADD_TICK:
+                    return
+                case ActionType.LOAD_LOAD:
+                    load = action.arg
+                    self.load_load(load)
+                case ActionType.UNLOAD_LOAD:
+                    load = action.arg
+                    self.unload_load(load)
+                case ActionType.RUN_CYCLE:
+                    self.cycle()
+                case ActionType.MOVE_ELEVATOR:
+                    self.move_elevator()
+                case _:
+                    raise NotImplementedError(f'Unknown action type {action.action_type}')
+
+    def move_elevator(self):
         increment = 0
         if self.direction == Direction.UP:
             increment = 1
@@ -93,10 +93,69 @@ class Elevator:
             self._move(increment)
             self.manager.algorithm.on_elevator_move(self)
 
+            for load in self.loads:
+                load.current_floor = self.current_floor
+                self.manager.on_load_move(load)
+
         if self._destination == self.current_floor or self._destination is None:
             self._destination = self.manager.algorithm.get_new_destination(self)
 
-    def add_load(self, load):
+    def cycle(self):
+        """Runs a cycle of the elevator"""
+        load_change_count = 0
+
+        # remove loads
+        for load in self.loads:
+            # unloading off elevator
+            if (
+                load.destination_floor != self.current_floor or
+                not self.manager.algorithm.pre_unload_check(load, self)
+            ):
+                continue
+
+            if load_change_count == 0:
+                self.action_manager.open_door()
+
+            self.action_manager.add(Action(ActionType.UNLOAD_LOAD, load))
+            load_change_count += 1
+            if load_change_count % 3 == 0:
+                self.action_manager.tick()
+
+        # add loads
+        added_loads = 0
+        if self.load <= self.manager.algorithm.max_load:
+            for load in self.manager.algorithm.loads:
+                # add to elevator
+                if (
+                    load.elevator is not None
+                    or load.initial_floor != self.current_floor
+                    or self.load + added_loads + load.weight > self.manager.algorithm.max_load
+                    or not self.manager.algorithm.pre_load_check(load, self)
+                ):
+                    continue
+
+                if load_change_count == 0:
+                    self.action_manager.open_door()
+
+                load.elevator = True  # mark elevator as taken
+
+                self.action_manager.add(Action(ActionType.LOAD_LOAD, load))
+                added_loads += load.weight
+                load_change_count += 1
+                if load_change_count % 3 == 0:
+                    self.action_manager.tick()
+
+        if load_change_count % 3 != 0:
+            self.action_manager.tick()
+
+        if load_change_count > 0:
+            self.action_manager.close_door()
+
+        # move elevator
+        self.action_manager.tick(3)
+        self.action_manager.add(Action(ActionType.MOVE_ELEVATOR))
+
+    def load_load(self, load):
         """Adds new loads to the elevator.
 
         load: Load
@@ -107,16 +166,37 @@ class Elevator:
             self.manager.algorithm.max_load is not None
             and self.load + load.weight > self.manager.algorithm.max_load
         ):
+            print(self.load, load.weight, self.manager.algorithm.max_load)
             raise FullElevator(self.id)
 
+        self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} added to elevator {self.id}')
+        load.enter_lift_tick = self.manager.algorithm.tick_count
+        wait_time = self.manager.algorithm.tick_count - load.tick_created
+        self.manager.algorithm.wait_times.append(wait_time)
+
+        load.elevator = self
         self.loads.append(load)
         self.manager.algorithm.on_load_load(load, self)
 
+    def unload_load(self, load):
+        """Removes loads from the elevator.
+
+        load: Load
+            A load to remove from the elevator
+        """
+        self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} unloaded from elevator {self.id}')
+        self.manager.algorithm.time_in_lift.append(self.manager.algorithm.tick_count - load.enter_lift_tick + 1)
+
+        load.elevator = None
+        self.loads.remove(load)
+        self.manager.algorithm.on_load_unload(load, self)
+        self.manager.algorithm.remove_load(load)
+
     def __repr__(self) -> str:
         if getattr(self, 'manager', None):
-            return f'<Elevator {self.id} load={self.load // 60} destination={self.destination} current_floor={self._current_floor}>'
+            return f'<Elevator {self.id} load={self.load} destination={self.destination} current_floor={self._current_floor}>'
         else:
-            return f'<Elevator* {self.id} load={self.load // 60} current_floor={self._current_floor}>'
+            return f'<Elevator* {self.id} load={self.load} current_floor={self._current_floor}>'
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Elevator):

@@ -1,6 +1,7 @@
 import copy
 import random
 import traceback
+import multiprocessing as mp
 
 from constants import Constants, LogLevel, LogOrigin
 from errors import TestTimeout
@@ -27,8 +28,8 @@ class TestSuiteManager(ElevatorManager):
         self.previous_loads = []
         self.current_simulation = None
 
-    def on_tick(self):
-        super().on_tick()
+    def _on_loop(self):
+        super()._on_loop()
         if self.active:
             self.current_simulation[1].on_tick(self.algorithm)
 
@@ -44,7 +45,7 @@ class TestSuiteManager(ElevatorManager):
         else:
             return None
 
-    def on_tick(self):
+    def _on_loop(self):
         if self.running is True and self.algorithm.simulation_running is False:
             self.end_simulation()
 
@@ -77,24 +78,32 @@ class TestSuiteManager(ElevatorManager):
             self.log_queue.put((origin, level, message))
 
 
-class ManagerList:
-    def __init__(self, managers=None) -> None:
+class ManagerPool:
+    def __init__(self, mp_manager: mp.Manager, managers=None) -> None:
         self.managers = managers or []
         self.taken_managers = set()
+        self.lock = mp_manager.Lock()
 
     def get(self):
-        m = [manager for manager in self.managers if manager.id not in self.taken_managers]
-        if len(m) == 0:
-            raise ValueError("No managers available")
-        take = m[0]
-        self.taken_managers.add(take.id)
-        return take
+        with self.lock:
+            m = [manager for manager in self.managers if manager.id not in self.taken_managers]
+            if len(m) == 0:
+                raise ValueError('No managers available')
+            take = m[0]
+            self.taken_managers.add(take.id)
+            return take
 
     def release(self, manager):
-        self.taken_managers.remove(manager.id)
+        with self.lock:
+            self.taken_managers.remove(manager.id)
 
     def append(self, manager):
-        self.managers.append(manager)
+        with self.lock:
+            self.managers.append(manager)
+
+    def close(self):
+        for manager in self.managers:
+            manager.close()
 
 
 def run_loop(args):

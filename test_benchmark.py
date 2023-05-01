@@ -34,7 +34,7 @@ if __name__ == '__main__':
                     floors=80,
                     num_elevators=16,
                     num_passengers=1600,
-                    total_iterations=1,
+                    total_iterations=10,
                     max_load=15 * 60,
                 ),
                 TestSettings(
@@ -44,7 +44,7 @@ if __name__ == '__main__':
                     floors=10,
                     num_elevators=2,
                     num_passengers=100,
-                    total_iterations=1,
+                    total_iterations=10,
                     max_load=15 * 60,
                 ),
             )

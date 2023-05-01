@@ -121,7 +121,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
         text_sizer.AddSpacer(top_border)
 
         fmt_text = f'{ev.current_floor}'
-        if ev.destination is not None:
+        if ev.destination is not None and ev.destination != ev.current_floor:
             fmt_text += f' {Unicode.ARROW} {ev.destination}'
 
         floor_text = wx.StaticText(elevator_box, wx.ID_ANY, fmt_text)
@@ -161,7 +161,7 @@ class ElevatorsPanel(scrolled.ScrolledPanel):
                 self._add_elevator(ev)
             else:
                 fmt_text = f'{ev.current_floor}'
-                if ev.destination is not None:
+                if ev.destination is not None and ev.destination != ev.current_floor:
                     fmt_text += f' {Unicode.ARROW} {ev.destination}'
 
                 if self.texts[ev.id][0].GetLabel() != fmt_text:

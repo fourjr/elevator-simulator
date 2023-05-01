@@ -11,7 +11,7 @@ import colorama
 from constants import LogLevel, LogOrigin
 from models import ElevatorAlgorithm, SimulationStats
 from suite import BackgroundProcess, TestStats, TestSuiteManager
-from suite.manager import ManagerList, run_loop
+from suite.manager import ManagerPool, run_loop
 
 
 class TestSuite:
@@ -60,7 +60,7 @@ class TestSuite:
         else:
             self.max_processes = min(max_processes, hard_max_processes)
 
-        self.managers = ManagerList()
+        self.algo_managers = ManagerPool(self.mp_manager)
         self.background_process = BackgroundProcess(
             self.export_queue if self.export_artefacts else None,
             self.log_queue,
@@ -72,7 +72,7 @@ class TestSuite:
         """Starts the Test Suite"""
         try:
             for _ in range(self.max_processes):
-                self.managers.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
+                self.algo_managers.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
 
             self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
 
@@ -81,8 +81,7 @@ class TestSuite:
             args = []
             for test in self.tests:
                 for i in range(test.total_iterations):
-                    args.append(((i + 1, test), self.managers))
-
+                    args.append(((i + 1, test), self.algo_managers))
 
             with Pool(processes=self.max_processes) as pool:
                 out = pool.map_async(run_loop, args)
@@ -187,24 +186,12 @@ class TestSuite:
             if self.background_process.is_alive():
                 self.background_process.terminate()
                 self.background_process.join()
-
-            # allow process to be abruptly stopped without waiting for queues to empty
-            # https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues
-            # self.in_queue.cancel_join_thread()
-            # self.out_queue.cancel_join_thread()
-            # self.error_queue.cancel_join_thread()
-            # self.export_queue.cancel_join_thread()
-            # self.log_queue.cancel_join_thread()
         else:
             self.export_queue.join()
             self.log_queue.join()
             self.close_event.set()
             self.background_process.join()
 
-        # self.in_queue.close()
-        # self.out_queue.close()
-        # self.error_queue.close()
-        # self.export_queue.close()
-        # self.log_queue.close()
-        self.mp_manager.shutdown()
+        self.algo_managers.close()
         self.background_process.close()
+        self.mp_manager.shutdown()

@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntEnum, Enum
 
 
 class ID(IntEnum):
@@ -30,11 +30,19 @@ class LogLevel(IntEnum):
     ERROR = 5
 
 
-class LogOrigin(IntEnum):
+class LogOrigin(Enum):
     SIMULATION = 1
     TEST = 2
     FILE_HANDLER = 3
     ERROR_HANDLER = 4
+
+
+class ActionType(Enum):
+    ADD_TICK = 1
+    RUN_CYCLE = 2
+    MOVE_ELEVATOR = 3
+    LOAD_LOAD = 4
+    UNLOAD_LOAD = 5
 
 
 class Unicode:

@@ -54,8 +54,8 @@ __algorithm__ = MyAlgorithm
 There are various events exposed for subclasses but the only required function is `get_new_destination`. Exposed events are listed below.
 
 ```python
-def pre_tick(self):
-def post_tick(self):
+def pre_loop(self):
+def post_loop(self):
 def on_load_load(self, load, elevator):
 def on_load_unload(self, load, elevator):
 def on_elevator_move(self, elevator):
@@ -72,11 +72,66 @@ def pre_load_check(self, load, elevator) -> bool:
 def pre_unload_check(self, load, elevator) -> bool:
 ```
 
-### The Cycle
+### The Loop
 
-![cycle](images/cycle.svg)
+The loop is managed by the [ActionManager](/models/action.py) which prioritises the actions to be carried out on an elevator. The loop is called once every tick and the next action will be executed.
+
+If there are no actions to be carried out, the elevator will carry out `RUN_CYCLE`.
+
+| Action | Description |
+| --- | --- |
+| ADD_TICK | Adds a tick to the elevator |
+| RUN_CYCLE | Runs the elevator [cycle](#the-cycle) |
+| MOVE_ELEVATOR | Moves the elevator to the next floor |
+| LOAD_LOAD | Loads the load into the elevator |
+| UNLOAD_LOAD | Unloads the load from the elevator |
+
+
+Ticks are only physically added in the algorithm, after the entire elevator's cycle executes and it exits with a `ADD_TICK` action. This repeats again in the next tick.
+
+For example, a typical action call could be as follows:
+```python
+RUN_CYCLE
+ADD_TICK - 3  # moving elevator
+MOVE_ELEVATOR
+
+RUN_CYCLE
+ADD_TICK - 3  # door open
+LOAD_LOAD
+LOAD_LOAD
+LOAD_LOAD
+ADD_TICK - 1  # 3 loads
+LOAD_LOAD
+LOAD_LOAD
+LOAD_UNLOAD
+ADD_TICK - 1  # 3 loads
+LOAD_UNLOAD
+ADD_TICK - 1  # 3 loads (part thereof)
+ADD_TICK - 3   # door close
+ADD_TICK - 3  # moving elevator
+MOVE_ELEVATOR
+```
+
+![loop](images/loop.svg)
 
 > GUI events will be triggered upon every configuration change and every tick. Refer to [GUI](#gui) and [ElevatorManager](/models.py) > `send_event` for more information.
+
+#### Ticks
+A tick is represented by 1 second (assuming 1x speed). The following are rough guidelines of how many ticks each action should take
+
+| Action | Ticks | Remarks
+| --- | --- | --- |
+| MOVE_ELEVATOR | 3 | |
+| LOAD_LOAD/UNLOAD_LOAD | 1 per 3 loads (or part thereof) | The counter is combined for both loading and unloading loads. |
+| OPEN_DOOR | 3 | This is only called when there is at least 1 load to load/unload. |
+| CLOSE_DOOR | 3 | This is only called when there is at least 1 load to load/unload. |
+
+
+#### The Cycle
+The cycle is the main event loop of the elevator. It can be broken down into 3 major parts:
+1. Remove existing loads
+2. Add new loads
+3. Move the elevator
 
 ## GUI
 
@@ -133,21 +188,21 @@ Tests are *mostly replicable* with the given seed. The initial state should be t
 Rough example of what the test suite is capable of. This ran in under 3 minutes (10 iterations each) on a 4 physical core CPU.
 
 ```
-BUSY                  NUM  TICK               WAIT               TIL            OCC
---------------------  ---  -----------------  -----------------  -------------  -------------
-Rolling               10   352.70 (353.00)    122.02 (117.45)    33.64 (27.20)  61.91 (85.33)
-LOOK                  10   338.30 (342.50)    108.49 (98.50)     29.21 (25.30)  55.91 (68.67)
-Destination Dispatch  10   473.10 (471.50)    118.12 (101.70)    26.90 (23.45)  36.78 (21.33)
-Scatter               10   673.57 (648.00)    176.93 (165.07)    68.45 (48.14)  67.06 (92.38)
-FCFS                  10   2581.40 (2570.50)  1081.34 (1060.90)  46.50 (39.40)  11.86 (0.67)
-NStepLOOK             10   5885.90 (5919.50)  1190.78 (747.15)   30.50 (26.35)  3.39 (0.00)
+SLOW                  NUM  TICK                 WAIT               TIL              OCC
+--------------------  ---  -------------------  -----------------  ---------------  -------------
+Rolling               10   714.90 (697.00)      295.20 (285.35)    44.19 (38.95)    58.40 (67.33)
+Destination Dispatch  10   889.00 (913.50)      353.88 (334.30)    55.40 (50.35)    57.22 (62.00)
+Scatter               10   955.10 (956.50)      387.54 (384.25)    74.25 (59.65)    75.16 (84.00)
+LOOK                  10   1267.40 (1311.50)    519.34 (504.15)    102.95 (88.60)   78.52 (88.67)
+NStepLOOK             10   1343.70 (1400.50)    525.12 (478.45)    68.43 (58.35)    49.47 (51.33)
+FCFS                  10   1552.20 (1569.50)    680.54 (670.45)    75.26 (69.75)    46.25 (46.00)
 
-SLOW                  NUM  TICK               WAIT               TIL            OCC
---------------------  ---  -----------------  -----------------  -------------  -------------
-LOOK                  10   29.90 (30.00)      8.80 (8.50)        3.84 (3.35)    33.19 (30.67)
-Rolling               10   34.30 (35.00)      10.37 (9.30)       4.52 (3.85)    35.89 (31.00)
-Scatter               10   41.30 (40.50)      10.57 (8.65)       7.11 (5.70)    51.62 (56.67)
-Destination Dispatch  10   43.80 (44.50)      12.28 (10.45)      5.89 (4.80)    38.45 (37.67)
-FCFS                  10   115.50 (114.00)    49.13 (49.05)      5.88 (5.15)    14.22 (8.33)
-NStepLOOK             10   150.90 (139.00)    32.16 (14.50)      4.06 (3.60)    7.32 (0.67)
+BUSY                  NUM  TICK                 WAIT               TIL              OCC
+--------------------  ---  -------------------  -----------------  ---------------  -------------
+Rolling               10   5161.20 (5125.00)    2197.29 (2105.40)  183.15 (155.40)  68.51 (92.00)
+Destination Dispatch  10   5364.70 (5459.00)    2159.20 (2063.25)  172.26 (159.20)  60.34 (68.00)
+Scatter               10   8144.80 (8166.50)    3453.09 (3427.00)  354.35 (242.15)  85.22 (98.67)
+LOOK                  10   8264.10 (8197.00)    3609.78 (3591.35)  367.68 (306.55)  88.06 (98.67)
+NStepLOOK             10   12005.00 (12145.50)  4507.09 (4395.95)  183.98 (157.45)  29.77 (14.67)
+FCFS                  10   13627.00 (13976.50)  5957.50 (5818.15)  243.40 (213.35)  34.09 (24.67)
 ```
