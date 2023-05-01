@@ -74,7 +74,7 @@ def pre_unload_check(self, load, elevator) -> bool:
 
 ### The Loop
 
-The loop is managed by the [ActionQueue](/models/action.py) which prioritises the actions to be carried out on an elevator. The loop is called once every tick and the next action will be executed.
+The loop is managed by the [ActionQueue](/models/action.py) which prioritises the actions to be carried out on an elevator. The loop is called once every tick and actions are executed until `ADD_TICK`.
 
 If there are no actions to be carried out, the elevator will carry out `RUN_CYCLE`.
 
