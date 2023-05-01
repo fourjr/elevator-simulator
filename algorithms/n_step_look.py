@@ -30,7 +30,7 @@ class ElevatorAlgorithmNStepLOOK(ElevatorAlgorithmLOOK):
             ev.current_floor = self.zones[elevator_index][0]
 
     def get_new_destination(self, elevator: Elevator):
-        """Gets a new destination for an elevator using the knuth strategy
+        """Gets a new destination for an elevator
 
         elevator: Elevator
             The elevator to get a new destination for

@@ -1,4 +1,4 @@
-from .action import ActionQueue
+from .action import Action, ActionQueue
 from .algorithm import ElevatorAlgorithm
 from .elevator import Elevator
 from .load import Load

@@ -57,7 +57,7 @@ class TestSettings:
     seed: int
         Seed for the random number generator
     speed: Optional[int | Infinity]
-        Speed of the simulation in relative ticks # TODO: improve explanation
+        Speed of the simulation in ticks per second
         Default: Infinity
     floors: int
         Number of floors in the building
@@ -107,11 +107,16 @@ class TestSettings:
         return self.suite.algorithms[self.algorithm_name]
 
     def to_dict(self, iteration_count=None):
+        if isinstance(self.speed, Infinity):
+            speed = 'Infinity'
+        else:
+            speed = self.speed
+
         return {
             'name': self.name,
             'algorithm_name': self.algorithm_name,
             'seed': self.seed,
-            'speed': self.speed if self.speed != Infinity else 'Infinity',
+            'speed': speed,
             'floors': self.floors,
             'num_elevators': self.num_elevators,
             'num_loads': len(self.loads),

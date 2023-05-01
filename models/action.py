@@ -8,10 +8,12 @@ from constants import ActionType
 @dataclass
 class Action:
     action_type: ActionType
-    arg: Any = None
+    argument: Any = None
 
 
 class ActionQueue:
+    """A queue of actions to be performed by the elevator"""
+
     def __init__(self):
         self.actions: Deque[Action] = deque()
 

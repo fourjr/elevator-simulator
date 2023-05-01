@@ -29,7 +29,7 @@ class DestinationDispatch(ElevatorAlgorithm):
         return math.ceil((1 / lf_ratio) * 20)
 
     def get_new_destination(self, elevator: Elevator):
-        """Gets a new destination for an elevator using the knuth strategy
+        """Gets a new destination for an elevator
 
         elevator: Elevator
             The elevator to get a new destination for

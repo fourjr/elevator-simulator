@@ -1,9 +1,8 @@
 from typing import List
 
-from constants import ActionType, Direction, LogLevel
+from constants import ActionType, Constants, Direction, LogLevel
 from errors import FullElevator
-from models import ActionQueue
-from models.action import Action
+from models import ActionQueue, Action
 
 
 class Elevator:
@@ -70,10 +69,10 @@ class Elevator:
                 case ActionType.ADD_TICK:
                     return
                 case ActionType.LOAD_LOAD:
-                    load = action.arg
+                    load = action.argument
                     self.load_load(load)
                 case ActionType.UNLOAD_LOAD:
-                    load = action.arg
+                    load = action.argument
                     self.unload_load(load)
                 case ActionType.RUN_CYCLE:
                     self.cycle()
@@ -107,9 +106,8 @@ class Elevator:
         # remove loads
         for load in self.loads:
             # unloading off elevator
-            if (
-                load.destination_floor != self.current_floor or
-                not self.manager.algorithm.pre_unload_check(load, self)
+            if load.destination_floor != self.current_floor or not self.manager.algorithm.pre_unload_check(
+                load, self
             ):
                 continue
 
@@ -118,7 +116,7 @@ class Elevator:
 
             self.action_manager.add(Action(ActionType.UNLOAD_LOAD, load))
             load_change_count += 1
-            if load_change_count % 3 == 0:
+            if load_change_count % Constants.MAX_NUM_LOADS_REMOVED_PER_TICK == 0:
                 self.action_manager.tick()
 
         # add loads
@@ -142,7 +140,7 @@ class Elevator:
                 self.action_manager.add(Action(ActionType.LOAD_LOAD, load))
                 added_loads += load.weight
                 load_change_count += 1
-                if load_change_count % 3 == 0:
+                if load_change_count % Constants.MAX_NUM_LOADS_REMOVED_PER_TICK == 0:
                     self.action_manager.tick()
 
         if load_change_count % 3 != 0:

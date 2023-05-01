@@ -56,7 +56,7 @@ class ElevatorManager:
                         self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
 
             if self.speed != Infinity:
-                time.sleep(1 * (1 / self.speed))
+                time.sleep(1 / self.speed)
 
             # speed: 3 seconds per floor (1x)
 
