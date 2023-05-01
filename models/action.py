@@ -11,7 +11,7 @@ class Action:
     arg: Any = None
 
 
-class ActionManager:
+class ActionQueue:
     def __init__(self):
         self.actions: Deque[Action] = deque()
 

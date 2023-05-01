@@ -2,7 +2,7 @@ from typing import List
 
 from constants import ActionType, Direction, LogLevel
 from errors import FullElevator
-from models import ActionManager
+from models import ActionQueue
 from models.action import Action
 
 
@@ -14,7 +14,7 @@ class Elevator:
         self.loads: List['Load'] = []
         self.attributes: List[str] = attributes or []
         self.enabled: bool = True
-        self.action_manager = ActionManager()
+        self.action_manager = ActionQueue()
 
         self._destination: int = self.manager.algorithm.get_new_destination(self)
 
