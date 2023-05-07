@@ -15,7 +15,7 @@ import wx.aui as aui
 
 from constants import ID, Unicode, Constants, LogLevel
 from errors import BadArgument
-from models import LogMessage, ElevatorManagerThread
+from models import LogMessage, ElevatorManagerThread, Elevator
 from utils import load_algorithms, save_algorithm
 
 
@@ -41,7 +41,7 @@ class BaseWindow(wx.Frame):
         self.current_algorithm = self.algorithms[Constants.DEFAULT_ALGORITHM]
 
         self.manager = ElevatorManagerThread(self, UpdateAlgorithm, self.current_algorithm)
-        self.algorithm = copy.deepcopy(self.manager.algorithm)
+        self.algorithm = self.manager.algorithm.copy()
 
         self.Bind(EVT_UPDATE_MANAGER, self.OnUpdateAlgorithm)
         self.Bind(wx.EVT_CLOSE, self.Close)
@@ -53,7 +53,8 @@ class BaseWindow(wx.Frame):
             if hasattr(c, 'OnUpdateAlgorithm'):
                 c.OnUpdateAlgorithm(self.algorithm, algo)
 
-        self.algorithm = copy.deepcopy(algo)
+        # self.algorithm = copy.deepcopy(algo)
+        self.algorithm = algo.copy()
 
     def _import_simulation(self, fn):
         dt = datetime.now().isoformat()
@@ -695,7 +696,8 @@ class StatsPanel(scrolled.ScrolledPanel):
             elevators = defaultdict(Counter)
             for load in after.loads:
                 if load.elevator is not None:
-                    elevators[load.elevator.id][load.destination_floor] += 1
+                    if isinstance(load.elevator, Elevator):
+                        elevators[load.elevator.id][load.destination_floor] += 1
                 else:
                     floors[load.current_floor][load.destination_floor] += 1
 

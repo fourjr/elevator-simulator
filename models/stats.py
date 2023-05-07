@@ -14,13 +14,19 @@ class GeneratedStats:
     def mean(self):
         if len(self.values) == 0:
             return 0
-        return statistics.mean(self.values)
+        try:
+            return statistics.mean(self.values)
+        except AssertionError:
+            return 0
 
     @property
     def median(self):
         if len(self.values) == 0:
             return 0
-        return statistics.median(self.values)
+        try:
+            return statistics.median(self.values)
+        except AssertionError:
+            return 0
 
     @property
     def minimum(self):
@@ -50,6 +56,9 @@ class GeneratedStats:
 
     def __repr__(self) -> str:
         return f'<GeneratedStats size={len(self.values)}>'
+
+    def copy(self):
+        return GeneratedStats(self.values.copy())
 
 
 @dataclass

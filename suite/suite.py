@@ -40,26 +40,23 @@ class TestSuite:
         self.close_event = mp.Event()
         self.export_artefacts = options.pop('export_artefacts', True)
         self.include_raw_stats = options.pop('include_raw_stats', True)
-        self.log_levels = options.pop(
-            'log_levels',
-            {
-                LogOrigin.SIMULATION: LogLevel.WARNING,
-                LogOrigin.TEST: LogLevel.INFO,
-                LogOrigin.ERROR_HANDLER: LogLevel.INFO,
-                LogOrigin.FILE_HANDLER: LogLevel.INFO,
-            },
-        )
+        self.log_levels = {
+            LogOrigin.SIMULATION: LogLevel.WARNING,
+            LogOrigin.TEST: LogLevel.INFO,
+            LogOrigin.ERROR_HANDLER: LogLevel.INFO,
+            LogOrigin.FILE_HANDLER: LogLevel.INFO,
+        }
+
+        if options.get('log_levels'):
+            self.log_levels.update(options.pop('log_levels'))
 
         self.results: dict[str, Tuple['TestSettings', TestStats]] = {}
         self.did_not_complete: List['TestSettings'] = []
 
         hard_max_processes = min(mp.cpu_count() - 1, sum(x.total_iterations for x in self.tests))
 
-        max_processes = options.pop('max_processes', None)
-        if max_processes is None:
-            self.max_processes = hard_max_processes
-        else:
-            self.max_processes = min(max_processes, hard_max_processes)
+        max_processes = options.pop('max_processes', hard_max_processes)
+        self.max_processes = min(max_processes, hard_max_processes)
 
         self.algo_manager_pool = ManagerPool(self.mp_manager)
         self.background_process = BackgroundProcess(
@@ -68,6 +65,9 @@ class TestSuite:
             self.close_event,
             self.log_levels,
         )
+
+        if options:
+            raise ValueError(f'Unknown options: {options}')
 
     def check_log(self, bar=None):
         while not self.close_event.is_set():

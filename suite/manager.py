@@ -28,11 +28,6 @@ class TestSuiteManager(ElevatorManager):
         self.previous_loads = []
         self.current_simulation = None
 
-    def _on_loop(self):
-        super()._on_loop()
-        if self.active:
-            self.current_simulation[1].on_tick(self.algorithm)
-
     @property
     def running(self):
         return self._running
@@ -59,6 +54,10 @@ class TestSuiteManager(ElevatorManager):
                 f'{self.name=} TIMEOUT',
             )
             raise TestTimeout(self.name, n_iter, settings)
+
+        if self.active:
+            if self.current_simulation[1].on_tick is not None:
+                self.current_simulation[1].on_tick(self.algorithm)
 
     def on_load_move(self, _):
         self.latest_load_move = self.algorithm.tick_count

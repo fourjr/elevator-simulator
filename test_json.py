@@ -23,18 +23,10 @@ if __name__ == '__main__':
     with open(fp) as f:
         json_data = json.load(f)
 
-    options = {
-        'max_processes': None,
-        'include_raw_stats': True,
-        'export_artefacts': True,
-    }
-
     try:
         user_options = json_data['options']
     except KeyError:
         pass
-    else:
-        options.update(user_options)
 
     try:
         data = json_data['tests']
@@ -73,6 +65,6 @@ if __name__ == '__main__':
         tests.append(TestSettings(**test))
 
     print('Starting test suite...')
-    suite = TestSuite(tests, **options)
+    suite = TestSuite(tests, **user_options)
     suite.start()
     print(suite.format_results())

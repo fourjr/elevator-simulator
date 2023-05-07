@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import List
 from constants import Constants
@@ -11,11 +12,14 @@ from models.stats import GeneratedStats, SimulationStats
 class ElevatorAlgorithm:
     """A global class that houses the elevators"""
 
+    name: str
+
     def __init__(self, manager, floors=None, *, elevators=None, loads=None) -> None:
         self.manager = manager
         self._floors = floors if floors is not None else Constants.DEFAULT_FLOORS
         self.elevators: List['Elevator'] = elevators or []
         self.loads: List['Load'] = loads or []
+
         self.max_load = 15 * 60
         self.rnd = random.Random()
 
@@ -23,6 +27,23 @@ class ElevatorAlgorithm:
         self.wait_times = GeneratedStats()
         self.time_in_lift = GeneratedStats()
         self.occupancy = GeneratedStats()
+
+    def copy(self):
+        """Creates a copy of the algorithm"""
+        ev_algo = self.__class__(
+            self.manager,
+            floors=self.floors,
+            elevators=[elevator.copy() for elevator in self.elevators],
+            loads=[load.copy() for load in self.loads],
+        )
+        ev_algo.max_load = self.max_load
+        ev_algo.rnd = copy.copy(self.rnd)
+
+        ev_algo.tick_count = self.tick_count
+        ev_algo.wait_times = self.wait_times.copy()
+        ev_algo.time_in_lift = self.time_in_lift.copy()
+        ev_algo.occupancy = self.occupancy.copy()
+        return ev_algo
 
     @property
     def floors(self):

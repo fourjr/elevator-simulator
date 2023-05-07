@@ -6,16 +6,24 @@ from models import ActionQueue, Action
 
 
 class Elevator:
-    def __init__(self, manager, elevator_id, current_floor=1, attributes=None) -> None:
+    def __init__(self, manager, elevator_id, current_floor=1) -> None:
         self.id = elevator_id
         self.manager: 'ElevatorManager' = manager
         self._current_floor = current_floor
         self.loads: List['Load'] = []
-        self.attributes: List[str] = attributes or []
         self.enabled: bool = True
         self.action_manager = ActionQueue()
 
         self._destination: int = self.manager.algorithm.get_new_destination(self)
+
+    def copy(self):
+        """Creates a copy of the elevator"""
+        ev = Elevator(self.manager, self.id, self.current_floor)
+        ev._destination = self._destination
+        ev.enabled = self.enabled
+        ev.loads = [load.copy() for load in self.loads]
+        ev.action_manager = self.action_manager.copy()
+        return ev
 
     @property
     def destination(self):

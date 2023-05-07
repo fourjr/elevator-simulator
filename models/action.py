@@ -35,3 +35,8 @@ class ActionQueue:
 
     def close_door(self):
         self.tick(3)
+
+    def copy(self):
+        new_queue = ActionQueue()
+        new_queue.actions = self.actions.copy()
+        return new_queue

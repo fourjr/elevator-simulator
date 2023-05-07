@@ -33,7 +33,7 @@ class ElevatorAlgorithmRolling(ElevatorAlgorithm):
 
         curr_direction = self._get_curr_direction(elevator)
         if curr_direction is Direction.DOWN:
-            return 0
+            return 1
         else:
             return self.floors
 

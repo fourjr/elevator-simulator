@@ -15,7 +15,6 @@ if __name__ == '__main__':
     SEED = 1234
     START_TIME = time.perf_counter()
     options = {
-        'max_processes': None,
         'include_raw_stats': False,
         'export_artefacts': True,
     }
@@ -34,7 +33,7 @@ if __name__ == '__main__':
                     floors=80,
                     num_elevators=16,
                     num_passengers=1600,
-                    total_iterations=10,
+                    total_iterations=100,
                     max_load=15 * 60,
                 ),
                 TestSettings(
@@ -44,7 +43,7 @@ if __name__ == '__main__':
                     floors=10,
                     num_elevators=2,
                     num_passengers=100,
-                    total_iterations=10,
+                    total_iterations=100,
                     max_load=15 * 60,
                 ),
             )

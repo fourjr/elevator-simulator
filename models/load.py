@@ -41,3 +41,11 @@ class Load:
         if not isinstance(other, Load):
             return super().__eq__(other)
         return self.id == other.id
+
+    def copy(self):
+        load = Load(self.initial_floor, self.destination_floor, self.weight)
+        load.current_floor = self.current_floor
+        load.elevator = self.elevator
+        load.tick_created = self.tick_created
+        load.enter_lift_time = self.enter_lift_time
+        return load

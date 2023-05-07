@@ -29,7 +29,6 @@ if __name__ == '__main__':
     SEED = 1234
     START_TIME = time.perf_counter()
     options = {
-        'max_processes': None,
         'include_raw_stats': False,
         'export_artefacts': True,
     }
@@ -49,7 +48,7 @@ if __name__ == '__main__':
                     floors=50,
                     num_passengers=100,
                     num_elevators=8,
-                    total_iterations=10,
+                    total_iterations=50,
                     max_load=15 * 60,
                     init_function=morning_init,
                 ),
@@ -60,7 +59,7 @@ if __name__ == '__main__':
                     floors=50,
                     num_passengers=100,
                     num_elevators=8,
-                    total_iterations=10,
+                    total_iterations=50,
                     max_load=15 * 60,
                     init_function=evening_init,
                 ),
