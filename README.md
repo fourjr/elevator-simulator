@@ -65,6 +65,7 @@ def on_elevator_removed(self, elevator):
 def on_floors_changed(self):
 def on_load_added(self, load):
 def on_load_removed(self, load):
+def on_simulation_end(self, load):
 ```
 
 There are also 2 check functions that should return a boolean. If the check fails, the load will not be loaded/unloaded.
