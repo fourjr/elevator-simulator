@@ -6,7 +6,8 @@ import wx
 import wx.lib.newevent as wxne
 
 from constants import ID, Constants, LogLevel
-from models import LogMessage, ElevatorManagerThread
+from gui import ElevatorManagerThread
+from models import LogMessage
 from utils import load_algorithms
 
 

@@ -11,5 +11,9 @@
         "SPINCTRLDOUBLE",
         "tqdm",
         "wxne"
-    ]
+    ],
+    "material-icon-theme.folders.associations": {
+        "algorithms": "core",
+    },
+    "files.autoSave": "onFocusChange"
 }

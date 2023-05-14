@@ -1,3 +1,4 @@
+from .manager import ElevatorManagerThread
 from .window import BaseWindow
 from .control import ControlPanel
 from .elevators import ElevatorsPanel

@@ -140,7 +140,9 @@ The cycle is the main event loop of the elevator. It can be broken down into 3 m
 
 ### End User
 
-The script `app.py` exposes a [WXPython](https://www.wxpython.org/) GUI to allow end users to interact with the elevator simulator. 
+The `gui` module exposes a [WXPython](https://www.wxpython.org/) GUI to allow end users to interact with the elevator simulator.
+
+Run `python -m gui`
 
 ![preview](images/preview.gif)
 
