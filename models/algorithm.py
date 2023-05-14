@@ -23,6 +23,7 @@ class ElevatorAlgorithm:
         self.max_load = 15 * 60
         self.rnd = random.Random()
 
+        self.active = False
         self.tick_count = 0
         self.wait_times = GeneratedStats()
         self.time_in_lift = GeneratedStats()
@@ -43,6 +44,7 @@ class ElevatorAlgorithm:
         ev_algo.wait_times = self.wait_times.copy()
         ev_algo.time_in_lift = self.time_in_lift.copy()
         ev_algo.occupancy = self.occupancy.copy()
+        ev_algo.active = self.active
         return ev_algo
 
     @property
@@ -174,6 +176,10 @@ class ElevatorAlgorithm:
         """
         pass
 
+    def on_simulation_end(self):
+        """Runs when the simulation ends"""
+        pass
+
     # endregion
 
     def add_load(self, load):
@@ -193,19 +199,17 @@ class ElevatorAlgorithm:
         self.loads.remove(load)
         self.on_load_removed(load)
 
-    def create_elevator(self, current_floor=1, attributes=None):
+    def create_elevator(self, current_floor=1):
         """Creates a new elevator
 
         current_floor: int[Optional]
             The current floor of the elevator
             Default: 1
-        attributes: list[Optional]
-            A list of attributes to pass to the elevator
         """
         new_id = 1
         if self.elevators:
             new_id = self.elevators[-1].id + 1
-        elevator = Elevator(self.manager, new_id, current_floor, attributes)
+        elevator = Elevator(self.manager, new_id, current_floor)
         self.elevators.append(elevator)
         self.on_elevator_added(elevator)
         return elevator

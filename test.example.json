@@ -1,12 +1,12 @@
 {
     "options": {
-        "include_raw_stats": false,
+        "include_raw_stats": true,
         "export_artefacts": true
     },
     "tests": [
         {
             "name": "Test",
-            "algorithm_name": "FCFS",
+            "algorithm_name": "Destination Dispatch",
             "total_iterations": 10,
             "seed": 20836,
             "floors": 50,

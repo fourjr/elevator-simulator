@@ -95,7 +95,7 @@ class BaseWindow(wx.Frame):
 
     @property
     def active(self):
-        return self.manager.active
+        return self.manager.algorithm.active
 
     @active.setter
     def active(self, value):
@@ -228,7 +228,7 @@ class ControlPanel(wx.Panel):
         self.InitUI()
 
     def OnUpdateAlgorithm(self, before, after):
-        # changes to track: current_floor, destination, new elevators
+        # changes to track: current_floor, destination, new elevators, active
         updated = False
 
         if before.floors != after.floors:
@@ -246,6 +246,11 @@ class ControlPanel(wx.Panel):
             for element_id in (ID.SELECT_ELEVATOR_REMOVE,):
                 element = self.FindWindowById(element_id)
                 element.SetItems([str(e.id) for e in after.elevators])
+
+        if before.active != after.active:
+            updated = True
+            element = self.FindWindowById(ID.BUTTON_CONTROL_PLAY)
+            element.SetLabel('Play' if not after.active else 'Pause')
 
         if updated:
             self.window.WriteToLog(LogLevel.TRACE, 'DebugPanel Layout Updated')
@@ -314,9 +319,10 @@ class ControlPanel(wx.Panel):
         self.window.WriteToLog(LogLevel.INFO, f'Setting floors to: {floor_count}')
 
     def toggle_play(self):
-        self.window.active = not self.window.active
-        self.window.WriteToLog(LogLevel.INFO, f'Setting play state to: {self.window.active}')
-        self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel('Play' if not self.window.active else 'Pause')
+        self.window.manager.toggle_active()
+        new_state = not self.window.manager.algorithm.active
+        self.window.WriteToLog(LogLevel.INFO, f'Setting play state to: {new_state}')
+        # self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel('Play' if not self.window.active else 'Pause')
 
     def import_simulation_fs(self):
         default_dir = os.getcwd()

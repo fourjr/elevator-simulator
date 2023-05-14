@@ -1,4 +1,3 @@
-import copy
 import random
 import traceback
 import multiprocessing as mp
@@ -41,12 +40,9 @@ class TestSuiteManager(ElevatorManager):
             return None
 
     def _on_loop(self):
-        if self.running is True and self.algorithm.simulation_running is False:
-            self.end_simulation()
-
         # frozen loads
         if self.algorithm.tick_count - self.latest_load_move > 500:
-            self.end_simulation()
+            self.end_test_simulation()
             n_iter, settings = self.current_simulation
             self.log_message(
                 LogOrigin.TEST,
@@ -55,7 +51,7 @@ class TestSuiteManager(ElevatorManager):
             )
             raise TestTimeout(self.name, n_iter, settings)
 
-        if self.active:
+        if self.algorithm.active:
             if self.current_simulation[1].on_tick is not None:
                 self.current_simulation[1].on_tick(self.algorithm)
 
@@ -66,7 +62,10 @@ class TestSuiteManager(ElevatorManager):
         self._running = True
         self.loop()
 
-    def end_simulation(self):
+    def on_simulation_end(self):
+        self.end_test_simulation()
+
+    def end_test_simulation(self):
         self._running = False
 
     def log_message_simulation(self, level, message):
@@ -138,9 +137,9 @@ def run_loop(args):
         # save
         if manager.export_queue is not None:
             name = f'{settings.name}_{settings.algorithm_name}_{n_iter}'
-            manager.export_queue.put((name, copy.deepcopy(manager.algorithm)))
+            manager.export_queue.put((name, manager.algorithm.copy()))
 
-        manager.active = True
+        manager.set_active(True)
         manager.log_message(
             LogOrigin.TEST,
             LogLevel.TRACE,

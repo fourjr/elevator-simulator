@@ -6,7 +6,7 @@ from typing import Callable, List, Tuple
 
 import wx
 
-from constants import _InfinitySentinel
+from constants import _InfinitySentinel, LogLevel
 
 
 class ElevatorManager:
@@ -19,14 +19,13 @@ class ElevatorManager:
         algorithm: 'ElevatorAlgorithm',
         *,
         gui: bool = True,
-        log_func: Callable = None,
+        log_func: Callable[[LogLevel, str], None] = None,
     ):
         super().__init__()
         self.parent = parent
         self.event = event
         self.speed = 3
         self.algorithm: 'ElevatorAlgorithm' = algorithm(self)
-        self.active = False
         self.is_open = True
         self.gui = gui
         self.id = next(ElevatorManager._id_iter)
@@ -45,15 +44,21 @@ class ElevatorManager:
 
     def loop(self):
         while self.running and self.is_open:
-            if self.active:
+            if self.algorithm.active:
                 self.algorithm.loop()
-                self.send_event()
                 self._on_loop()
 
                 if self.algorithm.simulation_running:
                     # only append if there are things going on
                     for elevator in self.algorithm.elevators:
                         self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
+                else:
+                    self.set_active(False)
+                    self.WriteToLog(LogLevel.INFO, 'Simulation finished, pausing')
+                    self.algorithm.on_simulation_end()
+                    self.on_simulation_end()
+
+                self.send_event()
 
             if not isinstance(self.speed, _InfinitySentinel):
                 time.sleep(1 / self.speed)
@@ -65,8 +70,8 @@ class ElevatorManager:
             event = self.event(algorithm=self.algorithm, thread=self)
             wx.PostEvent(self.parent, event)
 
-    def add_elevator(self, current_floor: int, attributes=None):
-        self.algorithm.create_elevator(current_floor, attributes)
+    def add_elevator(self, current_floor: int):
+        self.algorithm.create_elevator(current_floor)
         self.send_event()
 
     def remove_elevator(self, elevator_id: str):
@@ -110,7 +115,7 @@ class ElevatorManager:
         self.send_event()
 
     def set_active(self, active: bool):
-        self.active = active
+        self.algorithm.active = active
 
     def pause(self):
         self.set_active(False)
@@ -118,7 +123,15 @@ class ElevatorManager:
     def play(self):
         self.set_active(True)
 
+    def toggle_active(self):
+        self.set_active(not self.algorithm.active)
+        self.send_event()
+
     def on_load_move(self, load: 'Load'):
+        pass
+
+    def on_simulation_end(self):
+        """Runs when the simulation ends"""
         pass
 
 
