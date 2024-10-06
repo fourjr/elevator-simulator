@@ -78,6 +78,7 @@ class AsyncWebManager(ElevatorManager):
 
 class AsyncioManagerPool:
     def __init__(self, min_managers: int, max_managers: int) -> None:
+        """Creates a pool of managers"""
         self.managers: List[AsyncWebManager] = []
         for _ in range(min_managers):
             self.managers.append(AsyncWebManager())
@@ -88,6 +89,10 @@ class AsyncioManagerPool:
         self.lock = asyncio.Lock()
 
     async def get(self) -> AsyncWebManager:
+        """Gets a manager from the pool
+
+        If no managers are available, a new one is created if the max_managers limit has not been reached
+        """
         async with self.lock:
             m = [manager for manager in self.managers if manager.id not in self.taken_managers]
             if len(m) == 0:
@@ -101,14 +106,15 @@ class AsyncioManagerPool:
             self.taken_managers.add(take.id)
             return take
 
-    async def release(self, manager: AsyncWebManager):
+    async def release(self, manager: AsyncWebManager) -> None:
+        """Releases a manager back to the pool"""
         async with self.lock:
             self.taken_managers.remove(manager.id)
             if len(self.managers) > self.min_managers:
                 manager.close()
                 self.managers.remove(manager)
 
-    def close(self):
+    def close(self) -> None:
         """Closes all managers"""
         for manager in self.managers:
             manager.close()
