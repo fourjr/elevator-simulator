@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any, Deque
 
-from constants import ActionType
+from utils import ActionType
 
 
 @dataclass

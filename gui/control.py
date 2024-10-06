@@ -4,9 +4,7 @@ import random
 import wx
 import wx.aui as aui
 
-from constants import ID, LogLevel
-from errors import BadArgument
-from utils import save_algorithm
+from utils import ID, LogLevel, save_algorithm, BadArgumentError
 
 
 class ControlPanel(wx.Panel):
@@ -81,7 +79,7 @@ class ControlPanel(wx.Panel):
 
         try:
             self.window.manager.remove_elevator(elevator_id)
-        except BadArgument as e:
+        except BadArgumentError as e:
             self.window.WriteToLog(LogLevel.ERROR, str(e))
             return
 

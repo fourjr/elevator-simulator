@@ -1,8 +1,7 @@
 import wx
 import wx.lib.scrolledpanel as scrolled
 
-from constants import Unicode, LogLevel
-
+from utils import Unicode, LogLevel
 
 
 class ElevatorStatusPanel(scrolled.ScrolledPanel):

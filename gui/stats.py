@@ -4,8 +4,9 @@ import wx
 import wx.lib.scrolledpanel as scrolled
 import wx.aui as aui
 
-from constants import Unicode, LogLevel
+from utils import Unicode, LogLevel
 from models import Elevator
+
 
 class StatsPanel(scrolled.ScrolledPanel):
     def __init__(self, window):

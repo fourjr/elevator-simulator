@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 import itertools
+from dataclasses import dataclass, field
 
 
 @dataclass

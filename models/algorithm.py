@@ -1,12 +1,12 @@
 import copy
+import glob
+import importlib
+import os
 import random
 from typing import List
-from constants import Constants
-from errors import BadArgument
-from models.elevator import Elevator
-from models.load import Load
 
-from models.stats import GeneratedStats, SimulationStats
+from models import Load, Elevator, GeneratedStats, SimulationStats
+from utils import Constants, BadArgumentError, InvalidAlgorithmError
 
 
 class ElevatorAlgorithm:
@@ -225,7 +225,7 @@ class ElevatorAlgorithm:
                 self.elevators.remove(elevator)
                 self.on_elevator_removed(elevator_id)
                 return
-        raise BadArgument(f'No elevator with id {elevator_id}')
+        raise BadArgumentError(f'No elevator with id {elevator_id}')
 
     def add_passenger(self, initial, destination):
         """Adds a passenger
@@ -254,3 +254,30 @@ class ElevatorAlgorithm:
         if 'manager' in state:
             del state['manager']
         return state
+
+
+def load_algorithms() -> dict[str, ElevatorAlgorithm]:
+    """Loads all algorithms from the algorithms folder
+
+
+    Raises InvalidAlgorithm if there is a problem with loading the algorithm
+
+    Returns: dict[str, ElevatorAlgorithm]
+        A dictionary mapping of { algorithm_name: algorithm }
+    """
+    algorithms = {}
+    for i in glob.iglob('algorithms/*.py'):
+        module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
+        if not hasattr(module, '__algorithm__'):
+            raise InvalidAlgorithmError(f'Algorithm in {module} is not defined')
+        if not hasattr(module, '__name__'):
+            raise InvalidAlgorithmError(f'Name in {module} is not defined')
+
+        algorithm = module.__algorithm__
+        if not issubclass(algorithm, ElevatorAlgorithm):
+            raise InvalidAlgorithmError(f'Algorithm in {module} is not a subclass of ElevatorAlgorithm')
+
+        algorithm.name = module.__name__
+        algorithms[algorithm.name] = algorithm
+
+    return algorithms

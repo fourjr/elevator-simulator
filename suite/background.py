@@ -2,7 +2,7 @@ import multiprocessing as mp
 import queue
 from datetime import datetime
 
-from constants import LogLevel, LogOrigin
+from utils import LogLevel, LogOrigin
 from utils import save_algorithm
 
 

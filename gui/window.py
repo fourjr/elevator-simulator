@@ -5,10 +5,9 @@ from datetime import datetime
 import wx
 import wx.lib.newevent as wxne
 
-from constants import ID, Constants, LogLevel
 from gui import ElevatorManagerThread
-from models import LogMessage
-from utils import load_algorithms
+from models import LogMessage, load_algorithms
+from utils import ID, Constants, LogLevel
 
 
 class BaseWindow(wx.Frame):

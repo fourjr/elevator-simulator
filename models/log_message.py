@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from constants import LogLevel
+from utils import LogLevel
 
 
 @dataclass

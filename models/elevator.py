@@ -1,7 +1,6 @@
 from typing import List
 
-from constants import ActionType, Constants, Direction, LogLevel
-from errors import FullElevator
+from utils import ActionType, Constants, Direction, LogLevel, FullElevatorError
 from models import ActionQueue, Action
 
 
@@ -172,7 +171,7 @@ class Elevator:
             self.manager.algorithm.max_load is not None
             and self.load + load.weight > self.manager.algorithm.max_load
         ):
-            raise FullElevator(self.id)
+            raise FullElevatorError(self.id)
 
         self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} added to elevator {self.id}')
         load.enter_lift_tick = self.manager.algorithm.tick_count

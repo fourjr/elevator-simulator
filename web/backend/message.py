@@ -6,10 +6,9 @@ from typing import List
 
 from websockets import ConnectionClosed
 
-from web.backend.errors import InvalidStartBytes, IncompleteMessage, InvalidChecksum
-from web.backend.constants import Constants, OpCode
-from web.backend.utils import i2b, b2i
+from web.backend.constants import PacketConstants, OpCode
 from models import ElevatorManager
+from utils import InvalidStartBytesError, IncompleteMessageError, InvalidChecksumError, i2b, b2i
 
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -41,21 +40,21 @@ class ClientMessage:
             4 bytes: end
         """
         start_bytes = self.read_bytes(4)
-        if start_bytes != Constants.START_BYTES:
-            raise InvalidStartBytes(self)
+        if start_bytes != PacketConstants.START_BYTES:
+            raise InvalidStartBytesError
 
-        if self.raw_data[-4:] != Constants.END_BYTES:
-            raise IncompleteMessage
+        if self.raw_data[-4:] != PacketConstants.END_BYTES:
+            raise IncompleteMessageError
 
         self.command = OpCode.Client(self.read_int())
 
         self.length = self.read_int()
 
         if self.length + 4 * 5 != len(self.raw_data):
-            raise IncompleteMessage
+            raise IncompleteMessageError
 
         if not self.verify_checksum():
-            raise InvalidChecksum
+            raise InvalidChecksumError
 
         if self.command == OpCode.Client.REGISTER:
             self.client_id = random.randint(1, 2000)  # TODO
@@ -177,7 +176,7 @@ class ServerMessage:
             4 bytes: end
         """
         return b''.join([
-            Constants.START_BYTES,
+            PacketConstants.START_BYTES,
             i2b(self.command),
             i2b(self.length),
 
@@ -185,7 +184,7 @@ class ServerMessage:
             self.raw_data,
 
             i2b(self.checksum),
-            Constants.END_BYTES,
+            PacketConstants.END_BYTES,
         ])
 
     def __str__(self) -> str:

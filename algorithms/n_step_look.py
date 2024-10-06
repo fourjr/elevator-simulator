@@ -1,5 +1,5 @@
 from algorithms.look import ElevatorAlgorithmLOOK
-from constants import Direction
+from utils import Direction
 from models import Elevator
 from utils import split_array
 

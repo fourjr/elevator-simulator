@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class Constants:
+class PacketConstants:
     START_BYTES = b'\xE0\xEA\x0A\x08'
     END_BYTES = b'\xFF\xFF\xFF\xFF'
 

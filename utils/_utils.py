@@ -6,35 +6,6 @@ import pickle
 from datetime import datetime
 from typing import Generator, Tuple
 
-from errors import InvalidAlgorithm
-from models.algorithm import ElevatorAlgorithm
-
-
-def load_algorithms() -> dict[str, ElevatorAlgorithm]:
-    """Loads all algorithms from the algorithms folder
-
-
-    Raises InvalidAlgorithm if there is a problem with loading the algorithm
-
-    Returns: dict[str, ElevatorAlgorithm]
-        A dictionary mapping of { algorithm_name: algorithm }
-    """
-    algorithms = {}
-    for i in glob.iglob('algorithms/*.py'):
-        module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
-        if not hasattr(module, '__algorithm__'):
-            raise InvalidAlgorithm(f'Algorithm in {module} is not defined')
-        if not hasattr(module, '__name__'):
-            raise InvalidAlgorithm(f'Name in {module} is not defined')
-
-        algorithm = module.__algorithm__
-        if not issubclass(algorithm, ElevatorAlgorithm):
-            raise InvalidAlgorithm(f'Algorithm in {module} is not a subclass of ElevatorAlgorithm')
-
-        algorithm.name = module.__name__
-        algorithms[algorithm.name] = algorithm
-
-    return algorithms
 
 
 def save_algorithm(algorithm, fn=None) -> str:
@@ -80,3 +51,13 @@ def jq_join_timeout(jq, timeout) -> None:
         if not jq._unfinished_tasks._semlock._is_zero():
             if not jq._cond.wait(timeout=timeout):
                 raise TimeoutError('jq_join_timeout timed out')
+
+
+def i2b(num: int) -> bytes:
+    """Converts an integer to 4 bytes (big endian)"""
+    return int(num).to_bytes(4, byteorder='big')
+
+
+def b2i(data: bytes) -> int:
+    """Converts 4 bytes to an integer (big endian)"""
+    return int.from_bytes(data, byteorder='big')

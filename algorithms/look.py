@@ -1,6 +1,6 @@
 from typing import List
 
-from constants import Direction
+from utils import Direction
 from models import ElevatorAlgorithm, Elevator, Load
 
 

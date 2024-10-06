@@ -2,8 +2,8 @@ import random
 import traceback
 import multiprocessing as mp
 
-from constants import Constants, LogLevel, LogOrigin
-from errors import TestTimeout
+from utils import Constants, LogLevel, LogOrigin
+from utils import TestTimeoutError
 from models import ElevatorManager
 from utils import load_algorithms
 
@@ -49,7 +49,7 @@ class TestSuiteManager(ElevatorManager):
                 LogLevel.ERROR,
                 f'{self.name=} TIMEOUT',
             )
-            raise TestTimeout(self.name, n_iter, settings)
+            raise TestTimeoutError(self.name, n_iter, settings)
 
         if self.algorithm.active:
             if self.current_simulation[1].on_tick is not None:
@@ -148,7 +148,7 @@ def run_loop(args):
 
         try:
             manager.start_simulation()
-        except TestTimeout as e:
+        except TestTimeoutError as e:
             # continue with next simulation
             manager.log_message(
                 LogOrigin.TEST,

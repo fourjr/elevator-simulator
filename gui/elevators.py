@@ -1,14 +1,9 @@
 import math
-import os
-import random
 
 import wx
 import wx.lib.scrolledpanel as scrolled
-import wx.aui as aui
 
-from constants import ID, LogLevel, Unicode
-from errors import BadArgument
-from utils import save_algorithm
+from utils import LogLevel, Unicode
 
 
 class ElevatorsPanel(scrolled.ScrolledPanel):

@@ -2,7 +2,7 @@ class ElevatorError(Exception):
     pass
 
 
-class FullElevator(ElevatorError):
+class FullElevatorError(ElevatorError):
     """Raised when an elevator is full and unable to add new load"""
 
     def __init__(self, elevator_id) -> None:
@@ -10,7 +10,7 @@ class FullElevator(ElevatorError):
         self.elevator_id = elevator_id
 
 
-class BadArgument(ElevatorError):
+class BadArgumentError(ElevatorError):
     """Raised when arguments provided are not of a valid type or format"""
 
     pass
@@ -22,13 +22,13 @@ class ElevatorRunError(ElevatorError):
     pass
 
 
-class InvalidAlgorithm(ElevatorError):
+class InvalidAlgorithmError(ElevatorError):
     """Raised when the algorithm is not of a valid type"""
 
     pass
 
 
-class TestTimeout(ElevatorError):
+class TestTimeoutError(ElevatorError):
     """Raised when a test times out"""
 
     def __init__(self, process_name, n_iter, settings) -> None:
@@ -36,3 +36,19 @@ class TestTimeout(ElevatorError):
         self.process_name = process_name
         self.n_iter = n_iter
         self.settings = settings
+
+
+class PacketError(ValueError):
+    pass
+
+
+class InvalidStartBytesError(PacketError):
+    pass
+
+
+class IncompleteMessageError(PacketError):
+    pass
+
+
+class InvalidChecksumError(PacketError):
+    pass

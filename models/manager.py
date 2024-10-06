@@ -5,8 +5,8 @@ from typing import Callable, List, Tuple
 
 import wx
 
-from constants import _InfinitySentinel, LogLevel
-from models.algorithm import ElevatorAlgorithm
+from utils import _InfinitySentinel, LogLevel
+from models import ElevatorAlgorithm
 
 
 class ElevatorManager:

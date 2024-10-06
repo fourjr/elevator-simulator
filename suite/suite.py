@@ -9,7 +9,7 @@ from typing import List, Tuple
 
 import colorama
 
-from constants import LogLevel, LogOrigin
+from utils import LogLevel, LogOrigin
 from models import ElevatorAlgorithm
 from suite import BackgroundProcess, TestStats, TestSuiteManager
 from suite.manager import ManagerPool, run_loop

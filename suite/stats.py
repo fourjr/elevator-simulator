@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass, field
 from typing import List
 
-from constants import _InfinitySentinel, Infinity
+from utils import _InfinitySentinel, Infinity
 from models import CombinedStats, Load
 from models.stats import SimulationStats
 

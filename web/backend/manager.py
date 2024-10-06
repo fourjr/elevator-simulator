@@ -3,10 +3,8 @@ from typing import List
 
 from websockets import WebSocketServerProtocol
 
-from constants import Constants, LogLevel, LogOrigin
-from errors import TestTimeout
-from models import ElevatorManager
-from utils import load_algorithms
+from models import ElevatorManager, load_algorithms
+from utils import Constants, LogLevel, LogOrigin, TestTimeoutError
 
 
 class AsyncWebManager(ElevatorManager):
@@ -44,7 +42,7 @@ class AsyncWebManager(ElevatorManager):
                 LogLevel.ERROR,
                 f'{self.name=} TIMEOUT',
             )
-            raise TestTimeout(self.name, n_iter, settings)
+            raise TestTimeoutError(self.name, n_iter, settings)
 
     def on_load_move(self, _):
         self.latest_load_move = self.algorithm.tick_count

@@ -2,7 +2,7 @@ from typing import List, Set
 
 import wx
 
-from constants import ID, LogLevel
+from utils import ID, LogLevel
 from models import log_message
 
 

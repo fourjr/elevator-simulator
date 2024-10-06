@@ -1,6 +1,7 @@
 import threading
 from typing import Callable
-from models.manager import ElevatorManager
+
+from models import ElevatorManager
 
 
 class ElevatorManagerThread(ElevatorManager, threading.Thread):

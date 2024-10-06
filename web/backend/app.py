@@ -7,8 +7,8 @@ from websockets.server import serve, WebSocketServer
 
 from web.backend.constants import CloseReason, OpCode
 from web.backend.message import ClientMessage, ServerMessage
-from web.backend.errors import IncompleteMessage, InvalidStartBytes
 from web.backend.manager import AsyncWebManager, AsyncioManagerPool
+from utils import IncompleteMessageError, InvalidStartBytesError
 
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -35,10 +35,10 @@ class WebsocketApp:
 
             try:
                 parsed_message = ClientMessage.parse_message(current_message + raw_message)
-            except InvalidStartBytes:
+            except InvalidStartBytesError``:
                 logger.warning(f'Message by {connection.remote_address} has invalid start bytes')
                 continue
-            except IncompleteMessage:
+            except IncompleteMessageError:
                 logger.debug(f'Message by {connection.remote_address} has incomplete message, waiting out for future messages')
                 current_message += raw_message
                 continue
