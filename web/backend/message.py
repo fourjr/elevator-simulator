@@ -1,4 +1,3 @@
-import random
 import logging
 from dataclasses import dataclass
 from hashlib import md5
@@ -57,7 +56,7 @@ class ClientMessage:
             raise InvalidChecksumError
 
         if self.command == OpCode.Client.REGISTER:
-            self.client_id = random.randint(1, 2000)  # TODO
+            self.client_id = None
         else:
             self.client_id = self.read_int()
 

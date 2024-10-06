@@ -52,3 +52,7 @@ class IncompleteMessageError(PacketError):
 
 class InvalidChecksumError(PacketError):
     pass
+
+
+class NoManagerError(ElevatorError):
+    pass

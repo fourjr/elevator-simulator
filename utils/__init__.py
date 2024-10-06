@@ -5,5 +5,5 @@ from utils.constants import (
 )
 from utils.errors import (
     TestTimeoutError, BadArgumentError, ElevatorError, ElevatorRunError, FullElevatorError, IncompleteMessageError,
-    InvalidAlgorithmError, InvalidChecksumError, InvalidStartBytesError, PacketError
+    InvalidAlgorithmError, InvalidChecksumError, InvalidStartBytesError, PacketError, NoManagerError
 )

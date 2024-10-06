@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import logging
 from typing import Dict
 
@@ -8,13 +9,15 @@ from websockets.server import serve, WebSocketServer
 from web.backend.constants import CloseReason, OpCode
 from web.backend.message import ClientMessage, ServerMessage
 from web.backend.manager import AsyncWebManager, AsyncioManagerPool
-from utils import IncompleteMessageError, InvalidStartBytesError
+from utils import IncompleteMessageError, InvalidStartBytesError, NoManagerError
 
 
 logger = logging.getLogger('__main__.' + __name__)
 
 
 class WebsocketApp:
+    _id_iter = itertools.count()
+
     def __init__(self) -> None:
         self.pool = AsyncioManagerPool(3, 10)
         self.connections: Dict[int, AsyncWebManager] = {}
@@ -35,7 +38,7 @@ class WebsocketApp:
 
             try:
                 parsed_message = ClientMessage.parse_message(current_message + raw_message)
-            except InvalidStartBytesError``:
+            except InvalidStartBytesError:
                 logger.warning(f'Message by {connection.remote_address} has invalid start bytes')
                 continue
             except IncompleteMessageError:
@@ -47,16 +50,22 @@ class WebsocketApp:
                 current_message = b''
 
             if parsed_message.client_id not in self.connections:
+                # new connection
+                parsed_message.client_id = next(self._id_iter)
+
                 try:
-                    self.connections[parsed_message.client_id] = await self.pool.get()
-                    self.connections[parsed_message.client_id].ws_connection = connection
-                except IndexError:
+                    manager = await self.pool.get()
+                except NoManagerError:
+                    # No manager, try again later. Server at max capacity.
                     logger.warning(f'No managers available for {connection.remote_address}')
                     await ServerMessage(
-                        OpCode.Server.CLOSE, parsed_message.client_id, integers=[CloseReason.NO_MANAGERS]
+                        OpCode.Server.CLOSE, parsed_message.client_id, integers=[CloseReason.NO_MANAGER]
                     ).send(connection)
                     await connection.close()
                     continue
+                else:
+                    manager.ws_connection = connection
+                    self.connections[parsed_message.client_id] = manager
 
             manager = self.connections[parsed_message.client_id]
             parsed_message.execute_message(manager)

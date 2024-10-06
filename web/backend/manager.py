@@ -4,7 +4,7 @@ from typing import List
 from websockets import WebSocketServerProtocol
 
 from models import ElevatorManager, load_algorithms
-from utils import Constants, LogLevel, LogOrigin, TestTimeoutError
+from utils import Constants, LogLevel, LogOrigin, TestTimeoutError, NoManagerError
 
 
 class AsyncWebManager(ElevatorManager):
@@ -92,7 +92,7 @@ class AsyncioManagerPool:
             m = [manager for manager in self.managers if manager.id not in self.taken_managers]
             if len(m) == 0:
                 if len(self.managers) >= self.max_managers:
-                    raise IndexError('No managers available')
+                    raise NoManagerError('No managers available')
                 else:
                     manager = AsyncWebManager()
                     self.managers.append(manager)

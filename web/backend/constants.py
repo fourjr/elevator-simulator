@@ -51,4 +51,4 @@ class CloseReason:
     UNEXPECTED = 0
     SERVER_CLOSE = 1
     CLIENT_CLOSE = 2
-    NO_MANAGERS = 3
+    NO_MANAGER = 3
