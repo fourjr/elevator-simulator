@@ -1,7 +1,6 @@
 """Run a test suite simulating a full day"""
 import sys
 import time
-from constants import LogLevel, LogOrigin
 from models import Load
 from models import ElevatorAlgorithm
 
@@ -46,7 +45,7 @@ def on_tick(algo: ElevatorAlgorithm):
         algo.add_load_counter += 1
 
 
-if __name__ == '__main__':
+def run_test():
     test_only = ' '.join(sys.argv[1:]) or None
     SEED = 1234
     START_TIME = time.perf_counter()

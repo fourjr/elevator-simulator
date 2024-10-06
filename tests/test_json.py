@@ -12,12 +12,12 @@ from suite import TestSettings, TestSuite
 from models import Load
 
 
-if __name__ == '__main__':
+def run_test():
     fp = ' '.join(sys.argv[1:])
 
     if fp == '':
         # raise ValueError("No file path provided")
-        fp = 'test.example.json'
+        fp = 'tests/test.example.json'
         print(f'No file path provided, using {fp}')
 
     with open(fp) as f:

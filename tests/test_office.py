@@ -1,16 +1,30 @@
-"""Run a test suite from a JSON file.
-
-Usage: Execute script with the path to the JSON file as the first argument.
-Example: python test_json.py test.example.json
-"""
+"""Run a test suite simulating a busy office day"""
 import sys
 import time
+from models import Load
+from models import ElevatorAlgorithm
 
 from suite import TestSettings, TestSuite
 from utils import load_algorithms
 
 
-if __name__ == '__main__':
+def morning_init(algo: ElevatorAlgorithm):
+    for _ in range(500):
+        dest = algo.rnd.randint(2, algo.floors)
+        algo.loads.append(Load(1, dest, 60))
+
+    for _ in range(100):
+        init = algo.rnd.randint(2, algo.floors)
+        algo.loads.append(Load(init, 1, 60))
+
+
+def evening_init(algo: ElevatorAlgorithm):
+    for _ in range(600):
+        init = algo.rnd.randint(2, algo.floors)
+        algo.loads.append(Load(init, 1, 60))
+
+
+def run_test():
     test_only = ' '.join(sys.argv[1:]) or None
     SEED = 1234
     START_TIME = time.perf_counter()
@@ -24,27 +38,30 @@ if __name__ == '__main__':
     for algorithm_name in algorithms.keys():
         if test_only is not None and algorithm_name != test_only:
             continue
+
         tests.extend(
             (
                 TestSettings(
-                    name='Busy',
+                    name='Morning',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    floors=80,
-                    num_elevators=16,
-                    num_passengers=1600,
-                    total_iterations=100,
+                    floors=50,
+                    num_passengers=100,
+                    num_elevators=8,
+                    total_iterations=50,
                     max_load=15 * 60,
+                    init_function=morning_init,
                 ),
                 TestSettings(
-                    name='Slow',
+                    name='Evening',
                     algorithm_name=algorithm_name,
                     seed=SEED,
-                    floors=10,
-                    num_elevators=2,
+                    floors=50,
                     num_passengers=100,
-                    total_iterations=100,
+                    num_elevators=8,
+                    total_iterations=50,
                     max_load=15 * 60,
+                    init_function=evening_init,
                 ),
             )
         )
