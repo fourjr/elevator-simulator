@@ -9,7 +9,6 @@ from errors import BadArgument
 from utils import save_algorithm
 
 
-
 class ControlPanel(wx.Panel):
     def __init__(self, window):
         self.window = window
@@ -157,7 +156,7 @@ class ControlPanel(wx.Panel):
 
     def reset_simulation(self):
         self.window.manager.reset(self.window.current_algorithm)
-        self.window.WriteToLog(LogLevel.INFO, f'Reset')
+        self.window.WriteToLog(LogLevel.INFO, 'Reset')
 
     def LoadControlPanel(self):
         panel = wx.Panel(self.nb, wx.ID_ANY)

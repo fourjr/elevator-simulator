@@ -1,12 +1,12 @@
 from __future__ import annotations
 import itertools
-import threading
 import time
 from typing import Callable, List, Tuple
 
 import wx
 
 from constants import _InfinitySentinel, LogLevel
+from models.algorithm import ElevatorAlgorithm
 
 
 class ElevatorManager:
@@ -110,7 +110,9 @@ class ElevatorManager:
         self.algorithm.max_load = new_max_load
         self.send_event()
 
-    def reset(self, cls: 'ElevatorAlgorithm'):
+    def reset(self, cls: 'ElevatorAlgorithm' = None):
+        if cls is None:
+            cls = self.algorithm.__class__
         self.algorithm = cls(self)
         self.send_event()
 

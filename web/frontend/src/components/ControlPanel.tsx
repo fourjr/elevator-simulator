@@ -9,7 +9,7 @@ export default function ControlPanel() {
         fetch('http://localhost:8899')
             .then((res) => {
                 if (!res.ok) {
-                    console.log('we have a probelm')
+                    console.log('we have a problem')
                 }
             }
             )
