@@ -71,8 +71,9 @@ class ElevatorManager:
             wx.PostEvent(self.parent, event)
 
     def add_elevator(self, current_floor: int):
-        self.algorithm.create_elevator(current_floor)
+        ev = self.algorithm.create_elevator(current_floor)
         self.send_event()
+        return ev
 
     def remove_elevator(self, elevator_id: str):
         self.algorithm.remove_elevator(elevator_id)

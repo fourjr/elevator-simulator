@@ -46,7 +46,7 @@ class InvalidStartBytesError(PacketError):
     pass
 
 
-class IncompleteMessageError(PacketError):
+class IncompletePacketError(PacketError):
     pass
 
 

@@ -12,6 +12,7 @@ class ElevatorAlgorithmLOOK(ElevatorAlgorithm):
     3. Reverse direction upon reaching the top or bottom
     4. Repeat step 1 once we run out of loads
     """
+    name = 'LOOK'
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -113,5 +114,4 @@ class ElevatorAlgorithmLOOK(ElevatorAlgorithm):
         return super().on_load_unload(load, elevator)
 
 
-__name__ = 'LOOK'
 __algorithm__ = ElevatorAlgorithmLOOK

@@ -8,6 +8,7 @@ class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
     2. Pick up any other loads on the same floor
     3. Repeat step 1 once we run out of loads
     """
+    name = 'FCFS'
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -51,5 +52,4 @@ class ElevatorAlgorithmFCFS(ElevatorAlgorithm):
         super().on_load_load(load, elevator)
 
 
-__name__ = 'FCFS'
 __algorithm__ = ElevatorAlgorithmFCFS

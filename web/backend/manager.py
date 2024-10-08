@@ -1,10 +1,9 @@
 import asyncio
 from typing import List
 
-from websockets import WebSocketServerProtocol
-
 from models import ElevatorManager, load_algorithms
 from utils import Constants, LogLevel, LogOrigin, TestTimeoutError, NoManagerError
+from web.backend.connection import WSConnection
 
 
 class AsyncWebManager(ElevatorManager):
@@ -19,7 +18,7 @@ class AsyncWebManager(ElevatorManager):
         )
         self._running = False
         self.server = None
-        self.ws_connection: WebSocketServerProtocol = None
+        self.ws_connection: WSConnection = None
 
         self.latest_load_move = 0
         self.previous_loads = []

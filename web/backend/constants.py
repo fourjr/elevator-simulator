@@ -22,7 +22,6 @@ class OpCode:
         REGISTER = 11
         ADD_LOAD = 12  # (int: initial, int: destination, weight: int)
         REMOVE_LOAD = 13  # (int: load_id)
-        SET_SEED = 14  # (int: seed)
         SET_UPDATE_SPEED = 15  # (int: update_speed)
 
     class Server(IntEnum):
@@ -30,14 +29,16 @@ class OpCode:
         ACK = 1
         CLOSE = 2
         GAME_UPDATE_STATE = 3
+        ADD_ELEVATOR = 4
+        REMOVE_ELEVATOR = 5
+        SET_FLOORS = 6
+        ADD_PASSENGER = 7
+        ADD_PASSENGERS = 8
+        GAME_STATE = 9
+        ERROR = 10
 
     class GameUpdate(IntEnum):
-        ADD_ELEVATOR = 0
-        REMOVE_ELEVATOR = 1
-        SET_FLOORS = 2
         MOVE_LOAD = 8
-        ADD_PASSENGER = 4
-        ADD_PASSENGERS = 5
         SET_ALGORITHM = 6
         SET_MAX_LOAD = 7
 
@@ -47,8 +48,21 @@ class OpCode:
         ERROR = 2
 
 
+class Algorithms(IntEnum):
+    DESTINATION_DISPATCH = 0
+    FCFS = 1
+    LOOK = 2
+    NSTEPLOOK = 3
+    ROLLING = 4
+    SCATTER = 5
+
+
 class CloseReason:
     UNEXPECTED = 0
     SERVER_CLOSE = 1
     CLIENT_CLOSE = 2
     NO_MANAGER = 3
+
+
+class ErrorCode:
+    BAD_ARGUMENT = 0

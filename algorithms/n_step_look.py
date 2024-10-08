@@ -14,6 +14,7 @@ class ElevatorAlgorithmNStepLOOK(ElevatorAlgorithmLOOK):
     3. Reverse direction upon reaching the top or bottom
     4. Repeat step 1 once we run out of loads
     """
+    name = 'NStepLOOK'
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -87,5 +88,4 @@ class ElevatorAlgorithmNStepLOOK(ElevatorAlgorithmLOOK):
             self.current_direction[elevator.id] = Direction.UP
 
 
-__name__ = 'NStepLOOK'
 __algorithm__ = ElevatorAlgorithmNStepLOOK

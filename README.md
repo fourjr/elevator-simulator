@@ -35,12 +35,12 @@ Both the GUI and the Test Suite control the same managers and algorithms in the 
 
 A custom algorithm can be made by subclassing [ElevatorAlgorithm](/models.py) in a file in the `algorithms` folder.
 
-The name of the file is unimportant. 2 attributes need to be defined in the file, `__name__` (str) and `__algorithm__` (object) as shown.
-
-When debugging, `algorithm.name` will be the `__name__` attribute.
+The name of the file is unimportant. 2 attributes need to be defined in the file,  `__algorithm__` (object) as shown. `name` must be defined in the subclass.
 
 ```python
 class MyAlgorithm(ElevatorAlgorithm):
+    name = "My Custom Algorithm"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # custom init code here
@@ -50,7 +50,6 @@ class MyAlgorithm(ElevatorAlgorithm):
         pass
 
 
-__name__ = "My Custom Algorithm"
 __algorithm__ = MyAlgorithm
 ```
 

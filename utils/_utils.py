@@ -4,6 +4,8 @@ import pickle
 from datetime import datetime
 from typing import Generator, Tuple
 
+from web.backend.constants import Algorithms
+
 
 def save_algorithm(algorithm, fn=None) -> str:
     """Exports the algorithm
@@ -58,3 +60,8 @@ def i2b(num: int) -> bytes:
 def b2i(data: bytes) -> int:
     """Converts 4 bytes to an integer (big endian)"""
     return int.from_bytes(data, byteorder='big')
+
+
+def algo_to_enum(algo) -> int:
+    """Converts an algorithm to an enum"""
+    return Algorithms[algo.name.upper().replace(' ', '_')]

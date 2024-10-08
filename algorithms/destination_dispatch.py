@@ -14,6 +14,7 @@ class DestinationDispatch(ElevatorAlgorithm):
     2. Pick up any loads on the way whose destination floor is within the zone range of the elevator
     3. Repeat step 1 once we run out of loads
     """
+    name = 'Destination Dispatch'
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -76,5 +77,4 @@ class DestinationDispatch(ElevatorAlgorithm):
             elevator._destination = self.get_new_destination(elevator)
 
 
-__name__ = 'Destination Dispatch'
 __algorithm__ = DestinationDispatch

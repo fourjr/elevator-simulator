@@ -12,11 +12,11 @@ from utils import Constants, BadArgumentError, InvalidAlgorithmError
 class ElevatorAlgorithm:
     """A global class that houses the elevators"""
 
-    name: str
+    name: str = NotImplemented
 
     def __init__(self, manager, floors=None, *, elevators=None, loads=None) -> None:
         self.manager = manager
-        self._floors = floors if floors is not None else Constants.DEFAULT_FLOORS
+        self._floors: int = floors if floors is not None else Constants.DEFAULT_FLOORS
         self.elevators: List['Elevator'] = elevators or []
         self.loads: List['Load'] = loads or []
 
@@ -270,14 +270,11 @@ def load_algorithms() -> dict[str, ElevatorAlgorithm]:
         module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
         if not hasattr(module, '__algorithm__'):
             raise InvalidAlgorithmError(f'Algorithm in {module} is not defined')
-        if not hasattr(module, '__name__'):
-            raise InvalidAlgorithmError(f'Name in {module} is not defined')
 
         algorithm = module.__algorithm__
         if not issubclass(algorithm, ElevatorAlgorithm):
             raise InvalidAlgorithmError(f'Algorithm in {module} is not a subclass of ElevatorAlgorithm')
 
-        algorithm.name = module.__name__
         algorithms[algorithm.name] = algorithm
 
     return algorithms

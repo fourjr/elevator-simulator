@@ -8,6 +8,7 @@ class ElevatorAlgorithmScatter(ElevatorAlgorithm):
     2. Pick up any loads on the way, indifferent of direction
     3. Repeat step 1 once we run out of loads
     """
+    name = 'Scatter'
 
     def get_new_destination(self, elevator: Elevator):
         """Gets a new destination for an elevator
@@ -26,5 +27,4 @@ class ElevatorAlgorithmScatter(ElevatorAlgorithm):
             return load.destination_floor
 
 
-__name__ = 'Scatter'
 __algorithm__ = ElevatorAlgorithmScatter

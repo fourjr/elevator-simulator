@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 
-from web.backend import WebsocketApp
+from web.backend.app import WebsocketApp
 
 
 logger = logging.getLogger(__name__)

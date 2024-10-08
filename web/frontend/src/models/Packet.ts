@@ -1,43 +1,16 @@
 import { Md5 } from "ts-md5";
+import { ClientCommand, ServerCommand } from "./enums";
 
-
-enum ClientCommand {
-    ADD_ELEVATOR = 0,  // (int: current_floor)
-    REMOVE_ELEVATOR = 1,  // (int: elevator_id)
-    SET_FLOORS = 2,  // (int: floor_count)
-    SET_SIMULATION_SPEED = 3,  // (int: speed)
-    ADD_PASSENGER = 4,  // (int: initial, int: destination)
-    ADD_PASSENGERS = 5,  // (int: count, (int: initial, int: destination) * count)
-    SET_ALGORITHM = 6,  // TODO (int: algorithm_names)
-    SET_MAX_LOAD = 7,  // (int: new_max_load)
-    RESET = 8,
-    PAUSE = 9,
-    RESUME = 10,
-    REGISTER = 11,
-    ADD_LOAD = 12,  // (int: initial, int: destination, weight: int)
-    REMOVE_LOAD = 13,  // (int: load_id)
-    SET_SEED = 14,  // (int: seed)
-    SET_UPDATE_SPEED = 15,  // (int: update_speed)
-}
-
-enum ServerCommand {
-    REGISTER = 0,
-    ACK = 1,
-    CLOSE = 2,
-    GAME_UPDATE_STATE = 3
-}
 
 const START_BYTES = new Uint8Array([0xE0, 0xEA, 0X0A, 0x08]);
 const END_BYTES = new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]);
 
-class ClientMessage {
+class ClientPacket {
     command: ClientCommand;
-    clientId: number | null;
     data: Uint8Array;
 
-    constructor(command: ClientCommand, client_id: number | null = null, values: number[] | null = null) {
+    constructor(command: ClientCommand, values: number[] | null = null) {
         this.command = command;
-        this.clientId = client_id;
         if (values === null) {
             this.data = new Uint8Array(0);
         } else {
@@ -46,14 +19,13 @@ class ClientMessage {
     }
 
     getLength(): number {
-        return this.data.length + (this.clientId !== null ? 4 : 0);
+        return this.data.length;
     }
 
     getChecksum(): number {
         let hash = new Md5();
         hash.appendByteArray(concatByteArray(
             i2b(this.getLength()),
-            this.clientId !== null ? i2b(this.clientId) : new Uint8Array(0),
             this.data
         ));
         const hexResult = hash.end();
@@ -69,7 +41,6 @@ class ClientMessage {
             START_BYTES,
             i2b(this.command),
             i2b(this.getLength()),
-            this.clientId !== null ? i2b(this.clientId) : new Uint8Array(0),
             this.data,
             i2b(this.getChecksum()),
             END_BYTES
@@ -82,18 +53,18 @@ class ClientMessage {
     }
 }
 
-class ServerMessage {
+class ServerPacket {
     command: ServerCommand
     length: number
-    client_id: number
     raw_data: Uint8Array
+    data: number[]
 
-    _cursor: number = 0
+    private cursor: number = 0
 
     constructor(buffer_data: ArrayBuffer) {
         this.raw_data = new Uint8Array(buffer_data)
 
-        let start_bytes = this._readBytes(4)
+        let start_bytes = this.readBytes(4)
         if (start_bytes.some((val, idx) => val !== START_BYTES[idx])) {
             throw new Error("Invalid start bytes")
         }
@@ -103,21 +74,24 @@ class ServerMessage {
             throw new Error("Invalid end bytes")
         }
 
-        this.command = this._readInt() as ServerCommand
-        this.length = this._readInt()
+        this.command = this.readInt() as ServerCommand
+        this.length = this.readInt()
 
         if (this.length + 4 * 5 !== this.raw_data.length) {
             throw new Error("Invalid length" + this.length + " " + this.raw_data.length)
         }
 
-        if (!this._verifyChecksum()) {
+        if (!this.verifyChecksum()) {
             throw new Error("Invalid checksum")
         }
 
-        this.client_id = this._readInt()
+        this.data = []
+        while (this.cursor < this.raw_data.length - 8) {
+            this.data.push(this.readInt())
+        }
     }
 
-    _verifyChecksum(): boolean {
+    private verifyChecksum(): boolean {
         let hash = new Md5();
         hash.appendByteArray(
             this.raw_data.slice(8, -8)
@@ -132,14 +106,14 @@ class ServerMessage {
         return result % 10 === checksumValue
     }
 
-    _readBytes(length: number): Uint8Array {
-        const result = this.raw_data.slice(this._cursor, this._cursor + length)
-        this._cursor += length
+    readBytes(length: number): Uint8Array {
+        const result = this.raw_data.slice(this.cursor, this.cursor + length)
+        this.cursor += length
         return result
     }
 
-    _readInt(): number {
-        return b2i(this._readBytes(4))
+    readInt(): number {
+        return b2i(this.readBytes(4))
     }
 }
 
@@ -170,6 +144,6 @@ function concatByteArray(...arrays: Uint8Array[]): Uint8Array {
 export {
     ClientCommand,
     ServerCommand,
-    ClientMessage,
-    ServerMessage
+    ClientPacket as ClientMessage,
+    ServerPacket as ServerMessage
 }

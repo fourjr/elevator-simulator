@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from hashlib import md5
@@ -5,37 +6,36 @@ from typing import List
 
 from websockets import ConnectionClosed
 
-from web.backend.constants import PacketConstants, OpCode
-from models import ElevatorManager
-from utils import InvalidStartBytesError, IncompleteMessageError, InvalidChecksumError, i2b, b2i
+from utils import InvalidStartBytesError, IncompletePacketError, InvalidChecksumError, i2b, b2i, algo_to_enum
+from utils.errors import BadArgumentError
+from web.backend.constants import ErrorCode, PacketConstants, OpCode
 
 
 logger = logging.getLogger('__main__.' + __name__)
 
 
 @dataclass
-class ClientMessage:
+class ClientPacket:
     length: int
-    client_id: int
     command: OpCode
     raw_data: bytes
 
     _cursor: int = 0
 
     def __init__(self, raw_data) -> None:
-        """Creates a client message from raw data and parses it
-        If no error has been raised, the message is valid
+        """Creates a client packet from raw data and parses it
+        If no error has been raised, the packet is valid
 
         raw_data: bytes
             The raw message data from the websocket
 
-        Raises: InvalidStartBytesError, IncompleteMessageError, InvalidChecksumError
+        Raises: InvalidStartBytesError, IncompletePacketError, InvalidChecksumError
         """
         self.raw_data = raw_data
         self._parse()
 
     def _parse(self) -> None:
-        """Parses a client message and checks its validity
+        """Parses a client packet and checks its validity
         If no error has been raised, the message is valid
 
         Message Structure
@@ -43,38 +43,32 @@ class ClientMessage:
             4 bytes: Command
             4 bytes: length (n)
             [
-                4 bytes: client_id (may not exist if it is a register packet)
-                n-4 bytes: raw_data
+                n bytes: data
             ]
-            4 bytes: checksum (length, client_id, raw_data)
+            4 bytes: checksum (length, data)
             4 bytes: end
 
-        Raises: InvalidStartBytesError, IncompleteMessageError, InvalidChecksumError
+        Raises: InvalidStartBytesError, IncompletePacketError, InvalidChecksumError
         """
         start_bytes = self._read_bytes(4)
         if start_bytes != PacketConstants.START_BYTES:
             raise InvalidStartBytesError
 
         if self.raw_data[-4:] != PacketConstants.END_BYTES:
-            raise IncompleteMessageError
+            raise IncompletePacketError
 
         self.command = OpCode.Client(self._read_int())
 
         self.length = self._read_int()
 
         if self.length + 4 * 5 != len(self.raw_data):
-            raise IncompleteMessageError
+            raise IncompletePacketError
 
         if not self._verify_checksum():
             raise InvalidChecksumError
 
-        if self.command == OpCode.Client.REGISTER:
-            self.client_id = None
-        else:
-            self.client_id = self._read_int()
-
     def _verify_checksum(self) -> bool:
-        """Verifies the checksum of the message"""
+        """Verifies the checksum of the packet"""
         checksum_message = self.raw_data[8:-8]
         checksum = self.raw_data[-8:-4]
         expected_checksum = int(md5(checksum_message).hexdigest()[-3:], 16) % 10
@@ -82,22 +76,39 @@ class ClientMessage:
         return expected_checksum == actual_checksum
 
     def _read_bytes(self, length) -> bytes:
-        """Reads the next n bytes from the message"""
+        """Reads the next n bytes from the packet"""
         result = self.raw_data[self._cursor:self._cursor + length]
         self._cursor += length
         return result
 
     def _read_int(self) -> int:
-        """Reads the next 4 bytes from the message as an integer"""
+        """Reads the next 4 bytes from the packet as an integer"""
         return b2i(self._read_bytes(4))
 
-    def execute_message(self, manager: ElevatorManager) -> None:
-        """Executes the message on the manager"""
+    async def execute_message(self, manager: 'AsyncWebManager') -> None:
+        """Executes the packet on the manager"""
         match self.command:
             case OpCode.Client.ADD_ELEVATOR:
-                manager.add_elevator(self._read_int())
+                current_floor = self._read_int()
+                ev = manager.add_elevator(current_floor)
+                await self.reply(
+                    OpCode.Server.ADD_ELEVATOR, manager.ws_connection.protocol,
+                    [ev.id, ev.current_floor]
+                )
             case OpCode.Client.REMOVE_ELEVATOR:
-                manager.remove_elevator(self._read_int())
+                ev_id = self._read_int()
+                try:
+                    manager.remove_elevator(ev_id)
+                except BadArgumentError:
+                    await self.reply(
+                        OpCode.Server.ERROR, manager.ws_connection.protocol,
+                        [ErrorCode.BAD_ARGUMENT]
+                    )
+                else:
+                    await self.reply(
+                        OpCode.Server.REMOVE_ELEVATOR, manager.ws_connection.protocol,
+                        [ev_id]
+                    )
             case OpCode.Client.SET_FLOORS:
                 manager.set_floors(self._read_int())
             case OpCode.Client.SET_SIMULATION_SPEED:
@@ -116,57 +127,61 @@ class ClientMessage:
                 manager.reset()
             case OpCode.Client.REGISTER:
                 manager.reset()
+                # (int: floors, int: speed, int: max_load, strL algorithm, int: seed, int: simulation_speed, int: update_speed)
+                await self.reply(OpCode.Server.REGISTER, manager.ws_connection.protocol, [
+                    manager.algorithm.floors,
+                    manager.algorithm.max_load,
+                    algo_to_enum(manager.algorithm.__class__),
+                    manager.speed,
+                    manager.ws_connection.update_speed
+                ])
             case OpCode.Client.PAUSE:
                 manager.pause()
             case OpCode.Client.RESUME:
                 manager.play()
 
+    async def reply(self, opcode, connection, data: List[int]) -> None:
+        """Replies to the client with a server packet"""
+        await ServerPacket(opcode, data).send(connection)
+
     async def ack(self, connection) -> None:
-        """Sends an ACK message to the client"""
-        await ServerMessage(OpCode.Server.ACK, self.client_id).send(connection)
+        """Sends an ACK packet to the client"""
+        await self.reply(OpCode.Server.ACK, connection)
 
     def __str__(self) -> str:
-        """Returns a string representation of the message"""
-        return f'<ClientMessage command={self.command.name} client_id={self.client_id} raw_data_len={len(self.raw_data)}>'
+        """Returns a string representation of the packet"""
+        integer_data = [str(b2i(self.raw_data[n:n+4])) for n in range(12, len(self.raw_data) - 8, 4)]
+        return f'<ClientMessage command={self.command.name} data=[{", ".join(integer_data)}]>'
 
 
-class ServerMessage:
+class ServerPacket:
     def __init__(
-            self, command: OpCode.Server, client_id: int, *,
-            integers: List[int] = None, raw_data: bytes = None
-            ) -> None:
-        """Creates a server message"""
+        self, command: OpCode.Server, data: List[int] = None
+    ) -> None:
+        """Creates a server packet"""
         self.command = command
-        self.client_id = client_id
 
-        if integers is not None:
-            self.data = b''.join(map(i2b, integers))
-            if raw_data is not None:
-                raise ValueError("Cannot have both integers and raw_data")
-        elif raw_data is not None:
-            if not isinstance(self.data, bytes):
-                raise TypeError("raw_data must be bytes")
-            self.data = raw_data
+        if data is not None:
+            self.data = b''.join(map(i2b, data))
         else:
             self.data = b''
 
     @property
     def length(self) -> int:
-        """Gets the length of the message data (client_id and raw_data)"""
-        return 4 + len(self.data)
+        """Gets the length of the packet data (raw_data)"""
+        return len(self.data)
 
     @property
     def checksum(self) -> int:
-        """Calculates the checksum of the message (length, client_id, raw_data)"""
+        """Calculates the checksum of the packet (length, raw_data)"""
         checksum_message = b''.join([
             i2b(self.length),
-            i2b(self.client_id),
             self.data
         ])
         return int(md5(checksum_message).hexdigest()[-3:], 16) % 10
 
     async def send(self, connection):
-        """Sends the message to the client"""
+        """Sends the packet to the client"""
         try:
             await connection.send(bytes(self))
         except ConnectionClosed:
@@ -176,17 +191,16 @@ class ServerMessage:
             logger.debug(f'Sent message to {connection.remote_address}: {self}')
 
     def __bytes__(self) -> bytes:
-        """Converts the message to bytes as per the message format
+        """Converts the packet to bytes as per the packet format
 
-        Message Structure
+        Packet Structure
             4 bytes: start
             4 bytes: Command
             4 bytes: length (n)
             [
-                4 bytes: client_id
-                n-4 bytes: raw_data
+                n bytes: data
             ]
-            4 bytes: checksum (length, client_id, raw_data)
+            4 bytes: checksum (length, data)
             4 bytes: end
         """
         return b''.join([
@@ -194,7 +208,6 @@ class ServerMessage:
             i2b(self.command),
             i2b(self.length),
 
-            i2b(self.client_id),
             self.data,
 
             i2b(self.checksum),
@@ -203,4 +216,6 @@ class ServerMessage:
 
     def __str__(self) -> str:
         """Returns a string representation of the message"""
-        return f'<ServerMessage command={self.command.name} client_id={self.client_id} raw_data_len={len(self.data)}>'
+        integer_data = [str(b2i(self.data[n:n+4])) for n in range(0, len(self.data), 4)]
+        return f'<ServerMessage command={self.command.name} data=[{', '.join(integer_data)}]>'
+    # convert 12th index onwards to integers
