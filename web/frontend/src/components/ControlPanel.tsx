@@ -1,7 +1,7 @@
 import { Box, Button, Typography } from "@mui/material";
 import { useState } from "react";
 
-export default function ControlPanel() {
+export default function ControlPanel({wsInstance}: {wsInstance: WebSocket | null}) {
 
     const [playState, setPlayState] = useState(false);
 

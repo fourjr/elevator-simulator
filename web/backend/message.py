@@ -17,7 +17,6 @@ logger = logging.getLogger('__main__.' + __name__)
 class ClientMessage:
     length: int
     client_id: int
-    receiver: int
     command: OpCode
     raw_data: bytes
 
@@ -52,16 +51,16 @@ class ClientMessage:
 
         Raises: InvalidStartBytesError, IncompleteMessageError, InvalidChecksumError
         """
-        start_bytes = self.read_bytes(4)
+        start_bytes = self._read_bytes(4)
         if start_bytes != PacketConstants.START_BYTES:
             raise InvalidStartBytesError
 
         if self.raw_data[-4:] != PacketConstants.END_BYTES:
             raise IncompleteMessageError
 
-        self.command = OpCode.Client(self.read_int())
+        self.command = OpCode.Client(self._read_int())
 
-        self.length = self.read_int()
+        self.length = self._read_int()
 
         if self.length + 4 * 5 != len(self.raw_data):
             raise IncompleteMessageError
@@ -72,47 +71,47 @@ class ClientMessage:
         if self.command == OpCode.Client.REGISTER:
             self.client_id = None
         else:
-            self.client_id = self.read_int()
+            self.client_id = self._read_int()
 
     def _verify_checksum(self) -> bool:
         """Verifies the checksum of the message"""
         checksum_message = self.raw_data[8:-8]
         checksum = self.raw_data[-8:-4]
-        return int(md5(checksum_message).hexdigest(), 16) % 10 == b2i(checksum)
+        expected_checksum = int(md5(checksum_message).hexdigest()[-3:], 16) % 10
+        actual_checksum = b2i(checksum)
+        return expected_checksum == actual_checksum
 
-    def read_bytes(self, length) -> bytes:
+    def _read_bytes(self, length) -> bytes:
         """Reads the next n bytes from the message"""
         result = self.raw_data[self._cursor:self._cursor + length]
         self._cursor += length
         return result
 
-    def read_int(self) -> int:
+    def _read_int(self) -> int:
         """Reads the next 4 bytes from the message as an integer"""
-        result = b2i(self.raw_data[self._cursor:self._cursor + 4])
-        self._cursor += 4
-        return result
+        return b2i(self._read_bytes(4))
 
     def execute_message(self, manager: ElevatorManager) -> None:
         """Executes the message on the manager"""
         match self.command:
             case OpCode.Client.ADD_ELEVATOR:
-                manager.add_elevator(self.read_int())
+                manager.add_elevator(self._read_int())
             case OpCode.Client.REMOVE_ELEVATOR:
-                manager.remove_elevator(self.read_int())
+                manager.remove_elevator(self._read_int())
             case OpCode.Client.SET_FLOORS:
-                manager.set_floors(self.read_int())
+                manager.set_floors(self._read_int())
             case OpCode.Client.SET_SIMULATION_SPEED:
-                manager.set_speed(self.read_int())
+                manager.set_speed(self._read_int())
             case OpCode.Client.ADD_PASSENGER:
-                manager.add_passenger(self.read_int(), self.read_int())
+                manager.add_passenger(self._read_int(), self._read_int())
             case OpCode.Client.ADD_PASSENGERS:
-                count = self.read_int()
-                passengers = [(self.read_int(), self.read_int()) for _ in range(count)]
+                count = self._read_int()
+                passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
                 manager.add_passengers(passengers)
             case OpCode.Client.SET_ALGORITHM:
                 raise NotImplementedError
             case OpCode.Client.SET_MAX_LOAD:
-                manager.set_max_load(self.read_int())
+                manager.set_max_load(self._read_int())
             case OpCode.Client.RESET:
                 manager.reset()
             case OpCode.Client.REGISTER:
@@ -128,8 +127,7 @@ class ClientMessage:
 
     def __str__(self) -> str:
         """Returns a string representation of the message"""
-        return f'<ClientMessage command={self.command.name} \
-            client_id={self.client_id} raw_data_len={len(self.raw_data)}>'
+        return f'<ClientMessage command={self.command.name} client_id={self.client_id} raw_data_len={len(self.raw_data)}>'
 
 
 class ServerMessage:
@@ -142,15 +140,20 @@ class ServerMessage:
         self.client_id = client_id
 
         if integers is not None:
-            self.raw_data = b''.join(map(i2b, integers))
+            self.data = b''.join(map(i2b, integers))
             if raw_data is not None:
                 raise ValueError("Cannot have both integers and raw_data")
         elif raw_data is not None:
-            if not isinstance(self.raw_data, bytes):
+            if not isinstance(self.data, bytes):
                 raise TypeError("raw_data must be bytes")
-            self.raw_data = raw_data
+            self.data = raw_data
         else:
-            self.raw_data = b''
+            self.data = b''
+
+    @property
+    def length(self) -> int:
+        """Gets the length of the message data (client_id and raw_data)"""
+        return 4 + len(self.data)
 
     @property
     def checksum(self) -> int:
@@ -158,14 +161,9 @@ class ServerMessage:
         checksum_message = b''.join([
             i2b(self.length),
             i2b(self.client_id),
-            self.raw_data
+            self.data
         ])
-        return int(md5(checksum_message).hexdigest(), 16) % 10
-
-    @property
-    def length(self) -> int:
-        """Gets the length of the message data (client_id and raw_data)"""
-        return 4 + len(self.raw_data)
+        return int(md5(checksum_message).hexdigest()[-3:], 16) % 10
 
     async def send(self, connection):
         """Sends the message to the client"""
@@ -197,7 +195,7 @@ class ServerMessage:
             i2b(self.length),
 
             i2b(self.client_id),
-            self.raw_data,
+            self.data,
 
             i2b(self.checksum),
             PacketConstants.END_BYTES,
@@ -205,5 +203,4 @@ class ServerMessage:
 
     def __str__(self) -> str:
         """Returns a string representation of the message"""
-        return f'<ServerMessage command={self.command.name} \
-            client_id={self.client_id} raw_data_len={len(self.raw_data)}>'
+        return f'<ServerMessage command={self.command.name} client_id={self.client_id} raw_data_len={len(self.data)}>'
