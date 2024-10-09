@@ -52,7 +52,7 @@ class Unicode:
 
 
 class Constants:
-    DEFAULT_ALGORITHM = 'LOOK'
+    DEFAULT_ALGORITHM = 'Destination Dispatch'
     DEFAULT_FLOORS = 10
     MAX_PROCESSES = 3
     MAX_NUM_LOADS_REMOVED_PER_TICK = 3

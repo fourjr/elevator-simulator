@@ -14,4 +14,8 @@ function clamp(x: number, min: number, max: number): number {
     return Math.min(Math.max(x, min), max);
 };
 
-export { clamp }
+function getEnumKeys(enumType: any): string[] {
+    return Object.keys(enumType).filter(k => typeof enumType[k as any] === "number");
+}
+
+export { clamp, getEnumKeys }

@@ -64,4 +64,4 @@ def b2i(data: bytes) -> int:
 
 def algo_to_enum(algo) -> int:
     """Converts an algorithm to an enum"""
-    return Algorithms[algo.name.upper().replace(' ', '_')]
+    return Algorithms[algo.name.replace(' ', '_')]

@@ -6,9 +6,10 @@ from typing import List
 
 from websockets import ConnectionClosed
 
+from models.algorithm import ElevatorAlgorithm
 from utils import InvalidStartBytesError, IncompletePacketError, InvalidChecksumError, i2b, b2i, algo_to_enum
 from utils.errors import BadArgumentError
-from web.backend.constants import ErrorCode, PacketConstants, OpCode
+from web.backend.constants import Algorithms, ErrorCode, PacketConstants, OpCode
 
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -95,6 +96,7 @@ class ClientPacket:
                     OpCode.Server.ADD_ELEVATOR, manager.ws_connection.protocol,
                     [ev.id, ev.current_floor]
                 )
+
             case OpCode.Client.REMOVE_ELEVATOR:
                 ev_id = self._read_int()
                 try:
@@ -109,38 +111,86 @@ class ClientPacket:
                         OpCode.Server.REMOVE_ELEVATOR, manager.ws_connection.protocol,
                         [ev_id]
                     )
+
             case OpCode.Client.SET_FLOORS:
-                manager.set_floors(self._read_int())
+                floor_count = self._read_int()
+                manager.set_floors(floor_count)
+                await self.reply(
+                    OpCode.Server.SET_FLOORS, manager.ws_connection.protocol,
+                    [floor_count]
+                )
+
             case OpCode.Client.SET_SIMULATION_SPEED:
-                manager.set_speed(self._read_int())
+                speed = self._read_int() / 100
+                manager.set_speed(speed)
+                await self.reply(
+                    OpCode.Server.SET_SIMULATION_SPEED, manager.ws_connection.protocol,
+                    [speed * 100]
+                )
+            case OpCode.Client.SET_UPDATE_SPEED:
+                speed = self._read_int() / 100
+                manager.ws_connection.update_speed = speed  # TODO
+                await self.reply(
+                    OpCode.Server.SET_UPDATE_SPEED, manager.ws_connection.protocol,
+                    [speed * 100]
+                )
             case OpCode.Client.ADD_PASSENGER:
-                manager.add_passenger(self._read_int(), self._read_int())
+                floor_i = self._read_int()
+                floor_d = self._read_int()
+                manager.add_passenger(floor_i, floor_d)
+                await self.reply(
+                    OpCode.Server.ADD_PASSENGER, manager.ws_connection.protocol,
+                    [floor_i, floor_d]
+                )
             case OpCode.Client.ADD_PASSENGERS:
                 count = self._read_int()
                 passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
                 manager.add_passengers(passengers)
+
+                await self.reply(
+                    OpCode.Server.ADD_PASSENGERS, manager.ws_connection.protocol,
+                    [count, *sum(passengers, ())]
+                    # flatten passengers
+                )
+
             case OpCode.Client.SET_ALGORITHM:
-                raise NotImplementedError
+                algorithm_id = self._read_int()
+                algorithm_name = Algorithms(algorithm_id).name.replace('_', ' ')
+                cls = manager.algorithms[algorithm_name]
+                manager.set_algorithm(cls)
+
+                await self.reply(
+                    OpCode.Server.SET_ALGORITHM, manager.ws_connection.protocol,
+                    [algorithm_id]
+                )
+
             case OpCode.Client.SET_MAX_LOAD:
-                manager.set_max_load(self._read_int())
-            case OpCode.Client.RESET:
-                manager.reset()
-            case OpCode.Client.REGISTER:
+                max_load = self._read_int()
+                manager.set_max_load(max_load)
+                await self.reply(
+                    OpCode.Server.SET_MAX_LOAD, manager.ws_connection.protocol,
+                    [max_load]
+                )
+
+            case OpCode.Client.NEW_SIMULATION:
                 manager.reset()
                 # (int: floors, int: speed, int: max_load, strL algorithm, int: seed, int: simulation_speed, int: update_speed)
-                await self.reply(OpCode.Server.REGISTER, manager.ws_connection.protocol, [
+                await self.reply(OpCode.Server.NEW_SIMULATION, manager.ws_connection.protocol, [
                     manager.algorithm.floors,
                     manager.algorithm.max_load,
                     algo_to_enum(manager.algorithm.__class__),
                     manager.speed,
                     manager.ws_connection.update_speed
                 ])
-            case OpCode.Client.PAUSE:
+            case OpCode.Client.STOP_SIMULATION:
                 manager.pause()
-            case OpCode.Client.RESUME:
-                manager.play()
+                await self.reply(OpCode.Server.STOP_SIMULATION, manager.ws_connection.protocol)
 
-    async def reply(self, opcode, connection, data: List[int]) -> None:
+            case OpCode.Client.START_SIMULATION:
+                manager.play()
+                await self.reply(OpCode.Server.START_SIMULATION, manager.ws_connection.protocol)
+
+    async def reply(self, opcode, connection, data: List[int] = None) -> None:
         """Replies to the client with a server packet"""
         await ServerPacket(opcode, data).send(connection)
 

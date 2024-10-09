@@ -1,10 +1,10 @@
 enum ElevatorAlgorithm {
-    DESTINATION_DISPATCH = 0,
+    Destination_Dispatch = 0,
     FCFS = 1,
     LOOK = 2,
-    NSTEPLOOK = 3,
-    ROLLING = 4,
-    SCATTER = 5
+    NStepLOOK = 3,
+    Rolling = 4,
+    Scatter = 5,
 }
 
 
@@ -18,18 +18,16 @@ enum ClientCommand {
     ADD_PASSENGERS = 5,  // (int: count, (int: initial, int: destination) * count)
     SET_ALGORITHM = 6,  // TODO (int: algorithm_names)
     SET_MAX_LOAD = 7,  // (int: new_max_load)
-    RESET = 8,
-    PAUSE = 9,
-    RESUME = 10,
-    REGISTER = 11,
-    ADD_LOAD = 12,  // (int: initial, int: destination, weight: int)
-    REMOVE_LOAD = 13,  // (int: load_id)
-    SET_SEED = 14,  // (int: seed)
-    SET_UPDATE_SPEED = 15,  // (int: update_speed)
+    STOP_SIMULATION = 8,
+    START_SIMULATION = 9,
+    NEW_SIMULATION = 10,
+    ADD_LOAD = 11,  // (int: initial, int: destination)
+    REMOVE_LOAD = 12,  // (int: load_id)
+    SET_UPDATE_SPEED = 13,  // (int: update_speed)
 }
 
 enum ServerCommand {
-    REGISTER = 0,
+    NEW_SIMULATION = 0,
     ACK = 1,
     CLOSE = 2,
     GAME_UPDATE_STATE = 3,
@@ -40,6 +38,17 @@ enum ServerCommand {
     ADD_PASSENGERS = 8,
     GAME_STATE = 9,
     ERROR = 10,
+    SET_SIMULATION_SPEED = 11,
+    SET_UPDATE_SPEED = 12,
+    SET_ALGORITHM = 13,
+    STOP_SIMULATION = 14,
+    START_SIMULATION = 15,
+    SET_MAX_LOAD = 16
+}
+
+enum GameState {
+    RUNNING = 0,
+    PAUSED = 1,
 }
 
 // PACKET STRUCTURE
@@ -57,4 +66,5 @@ enum ElevatorPacket {
     id = 0,
     currentFloor = 1,
 }
-export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, ClientCommand, ServerCommand };
+
+export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, ClientCommand, ServerCommand };

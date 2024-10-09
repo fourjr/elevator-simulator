@@ -7,7 +7,7 @@ import { useEffect } from "react";
 export default function ElevatorPanel({elevators}: {elevators: Elevator[]}) {
     return <Box>{
         elevators.map(elevator => 
-            <Typography>Elevator {elevator.id} at floor {elevator.currentFloor}{elevator.destinationFloor === null ? "" : `, going to ${elevator.destinationFloor}`}</Typography>
+            <Typography key={elevator.id}>Elevator {elevator.id} at floor {elevator.currentFloor}{elevator.destinationFloor === null ? "" : `, going to ${elevator.destinationFloor}`}</Typography>
         )
     }
     </Box>
