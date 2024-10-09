@@ -1,7 +1,8 @@
 import { ElevatorAlgorithm, GameState } from "@/models/enums";
 import { ClientCommand, ClientMessage, ServerMessage } from "@/models/Packet";
 import { clamp, getEnumKeys } from "@/utils";
-import { Box, Button, Grid, MenuItem, Select, SelectChangeEvent, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, MenuItem, Select, SelectChangeEvent, Stack, TextField, Typography } from "@mui/material";
+import Grid from '@mui/material/Unstable_Grid2';
 import { useEffect, useState } from "react";
 
 export default function ControlPanel(
@@ -130,10 +131,10 @@ export default function ControlPanel(
     }
 
     return <Grid container>
-        <Grid item xs={12}>
+        <Grid xs={12}>
             <Typography fontSize="1.25em" fontWeight="bold">Control Panel</Typography>
         </Grid>
-        <Grid item xs={6}>
+        <Grid xs={6}>
             <Box m={1}>
                 <Typography m={1} display="inline">Elevator</Typography>
                 <FloorsInputField value={newElevatorFloor} setValue={setNewElevatorFloor} />
@@ -179,7 +180,7 @@ export default function ControlPanel(
                 <Button onClick={sendReset}>Reset</Button>
             </Box>
         </Grid>
-        <Grid item xs={6}>
+        <Grid xs={6}>
             <Box m={1}>
                 <Typography m={1} display="inline">Floors</Typography>
                 <TextField sx={{ width: "4ch" }} value={floorInput !== null ? floorInput : ""} onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,9 +231,9 @@ export default function ControlPanel(
                         setUpdateSpeedInput(event.target.value);
                     }
                 }} variant="standard"></TextField>
-        </Box>
+            </Box>
 
-        <Button onClick={updateCol2}>Set</Button>
+            <Button onClick={updateCol2}>Set</Button>
+        </Grid>
     </Grid>
-    </Grid >
 }
