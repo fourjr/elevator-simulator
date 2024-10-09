@@ -1,15 +1,15 @@
 import { Md5 } from "ts-md5";
-import { ClientCommand, ServerCommand } from "./enums";
+import { OpCode } from "./enums";
 
 
 const START_BYTES = new Uint8Array([0xE0, 0xEA, 0X0A, 0x08]);
 const END_BYTES = new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]);
 
 class ClientPacket {
-    command: ClientCommand;
+    command: OpCode;
     data: Uint8Array;
 
-    constructor(command: ClientCommand, values: number[] | null = null) {
+    constructor(command: OpCode, values: number[] | null = null) {
         this.command = command;
         if (values === null) {
             this.data = new Uint8Array(0);
@@ -49,12 +49,12 @@ class ClientPacket {
 
     send(ws: WebSocket): void {
         ws.send(this.toArrayBuffer());
-        console.log(`Message sent to server: ${ClientCommand[this.command]}`)
+        console.log(`Message sent to server: ${OpCode[this.command]}`)
     }
 }
 
 class ServerPacket {
-    command: ServerCommand
+    command: OpCode
     length: number
     raw_data: Uint8Array
     numData: number[]
@@ -74,7 +74,7 @@ class ServerPacket {
             throw new Error("Invalid end bytes")
         }
 
-        this.command = this.readInt() as ServerCommand
+        this.command = this.readInt() as OpCode
         this.length = this.readInt()
 
         if (this.length + 8 + 6 !== this.raw_data.length) {
@@ -161,8 +161,6 @@ function concatByteArray(...arrays: Uint8Array[]): Uint8Array {
 
 
 export {
-    ClientCommand,
-    ServerCommand,
-    ClientPacket as ClientMessage,
-    ServerPacket as ServerMessage
+    ServerPacket,
+    ClientPacket
 }

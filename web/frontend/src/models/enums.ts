@@ -52,4 +52,4 @@ enum ElevatorPacket {
     currentFloor = 1,
 }
 
-export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, OpCode as ClientCommand, OpCode as ServerCommand };
+export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, OpCode };

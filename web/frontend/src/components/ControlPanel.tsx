@@ -1,9 +1,11 @@
-import { ElevatorAlgorithm, GameState } from "@/models/enums";
-import { ClientCommand, ClientMessage, ServerMessage } from "@/models/Packet";
-import { clamp, getEnumKeys } from "@/utils";
-import { Box, Button, MenuItem, Select, SelectChangeEvent, Stack, TextField, Typography } from "@mui/material";
-import Grid from '@mui/material/Unstable_Grid2';
 import { useEffect, useState } from "react";
+import { Box, Button, MenuItem, Select, SelectChangeEvent, TextField, Typography } from "@mui/material";
+import Grid from '@mui/material/Unstable_Grid2';
+
+import { ElevatorAlgorithm, GameState, OpCode } from "@/models/enums";
+import { ClientPacket } from "@/models/Packet";
+import { clamp, getEnumKeys } from "@/utils";
+
 
 export default function ControlPanel(
     { wsInstance, elevatorIds, floors: floorCount,
@@ -40,22 +42,22 @@ export default function ControlPanel(
 
     function addElevator() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.ADD_ELEVATOR, [newElevatorFloor]);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.ADD_ELEVATOR, [newElevatorFloor]);
+            packet.send(wsInstance);
         }
     }
 
     function removeElevator() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.REMOVE_ELEVATOR, [removeElevatorId]);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.REMOVE_ELEVATOR, [removeElevatorId]);
+            packet.send(wsInstance);
         }
     }
 
     function addPassenger() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.ADD_PASSENGERS, [1, addPassengerStartFloor, addPassengerEndFloor]);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.ADD_PASSENGERS, [1, addPassengerStartFloor, addPassengerEndFloor]);
+            packet.send(wsInstance);
         }
     }
 
@@ -69,16 +71,16 @@ export default function ControlPanel(
                 while ((floor_f = Math.floor(Math.random() * floorCount) + 1) === floor_i);
                 values.push(floor_i, floor_f);
             }
-            const message = new ClientMessage(ClientCommand.ADD_PASSENGERS, values);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.ADD_PASSENGERS, values);
+            packet.send(wsInstance);
         }
     }
 
     function changeAlgorithm(algorithmName: keyof typeof ElevatorAlgorithm) {
         if (wsInstance !== null) {
             const algorithm_id: number = ElevatorAlgorithm[algorithmName];
-            const message = new ClientMessage(ClientCommand.SET_ALGORITHM, [algorithm_id]);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.SET_ALGORITHM, [algorithm_id]);
+            packet.send(wsInstance);
         }
     }
 
@@ -93,47 +95,46 @@ export default function ControlPanel(
     }
 
     function togglePlay() {
-        // const new ServerMessage
         if (wsInstance !== null) {
-            const message = new ClientMessage(gameState === GameState.RUNNING ? ClientCommand.STOP_SIMULATION : ClientCommand.START_SIMULATION);
-            message.send(wsInstance);
+            const packet = new ClientPacket(gameState === GameState.RUNNING ? OpCode.STOP_SIMULATION : OpCode.START_SIMULATION);
+            packet.send(wsInstance);
         }
     }
 
     function sendReset() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.NEW_SIMULATION);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.NEW_SIMULATION);
+            packet.send(wsInstance);
         }
     }
 
     function updateCol2() {
         if (wsInstance !== null) {
             if (floorInput !== floorCount && floorInput !== null) {
-                const message = new ClientMessage(ClientCommand.SET_FLOORS, [floorInput]);
-                message.send(wsInstance);
+                const packet = new ClientPacket(OpCode.SET_FLOORS, [floorInput]);
+                packet.send(wsInstance);
             }
             if (maxLoadInput !== maxLoad && maxLoadInput !== null) {
-                const message = new ClientMessage(ClientCommand.SET_MAX_LOAD, [maxLoadInput]);
-                message.send(wsInstance);
+                const packet = new ClientPacket(OpCode.SET_MAX_LOAD, [maxLoadInput]);
+                packet.send(wsInstance);
             }
             let simSpeedFloat = parseFloat(simulationSpeedInput);
             if (0.01 <= simSpeedFloat && simSpeedFloat <= 100 && simSpeedFloat !== simulationSpeed) {
-                const message = new ClientMessage(ClientCommand.SET_SIMULATION_SPEED, [Math.floor(simSpeedFloat * 100)]);
-                message.send(wsInstance);
+                const packet = new ClientPacket(OpCode.SET_SIMULATION_SPEED, [Math.floor(simSpeedFloat * 100)]);
+                packet.send(wsInstance);
             }
             let updateSpeedFloat = parseFloat(updateSpeedInput);
             if (0.01 <= updateSpeedFloat && updateSpeedFloat <= 100 && updateSpeedFloat !== updateSpeed) {
-                const message = new ClientMessage(ClientCommand.SET_UPDATE_SPEED, [Math.floor(updateSpeedFloat * 100)]);
-                message.send(wsInstance);
+                const packet = new ClientPacket(OpCode.SET_UPDATE_SPEED, [Math.floor(updateSpeedFloat * 100)]);
+                packet.send(wsInstance);
             }
         }
     }
 
     function getDashboard() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.DASHBOARD);
-            message.send(wsInstance);
+            const packet = new ClientPacket(OpCode.DASHBOARD);
+            packet.send(wsInstance);
         }
     }
 

@@ -1,7 +1,7 @@
-import { ServerMessage } from "./Packet";
+import { ServerPacket } from "./Packet";
 
 interface WSEvent extends Event {
-    message: ServerMessage;
+    packet: ServerPacket;
 }
 
 export default WSEvent;

@@ -1,4 +1,5 @@
 'use client';
+import { useMemo, useState } from 'react';
 import Grid from '@mui/material/Unstable_Grid2'; // Grid version 2
 
 import ElevatorStatusPanel from '@/components/ElevatorStatusPanel';
@@ -6,12 +7,12 @@ import ElevatorPanel from '@/components/ElevatorPanel';
 import ControlPanel from '@/components/ControlPanel';
 import StatsPanel from '@/components/StatsPanel';
 import LogPanel from '@/components/LogPanel';
-import { useMemo, useState } from 'react';
 
-import { ClientMessage, ServerMessage, ClientCommand, ServerCommand } from '@/models/Packet';
-import WSEvent from '@/models/WSEvent';
-import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket } from '@/models/enums';
+import { ClientPacket, ServerPacket } from '@/models/Packet';
+import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket, OpCode } from '@/models/enums';
 import Elevator from '@/models/Elevator';
+import WSEvent from '@/models/WSEvent';
+
 
 export default function Home() {
     const [floors, setFloors] = useState<number>(-1);
@@ -29,71 +30,71 @@ export default function Home() {
 
     if (wsInstance) {
         wsInstance.onopen = () => {
-            const registerMessage = new ClientMessage(ClientCommand.NEW_SIMULATION)
+            const registerMessage = new ClientPacket(OpCode.NEW_SIMULATION)
             registerMessage.send(wsInstance);
         }
         wsInstance.onmessage = messageEvent => {
             messageEvent.data.arrayBuffer().then((data: ArrayBuffer) => {
-                const message = new ServerMessage(data);
+                const packet = new ServerPacket(data);
                 const event = new Event('wsMessage') as WSEvent;
-                event.message = message;
+                event.packet = packet;
                 document.dispatchEvent(event);
-                console.log(`Message received from server: ${ServerCommand[message.command]} ${message.numData}`)
+                console.log(`Message received from server: ${OpCode[packet.command]} ${packet.numData}`)
 
-                if (message.command === ServerCommand.NEW_SIMULATION) {
+                if (packet.command === OpCode.NEW_SIMULATION) {
                     // reset
-                    setFloors(message.numData[RegisterPacket.floors]);
-                    setMaxLoad(message.numData[RegisterPacket.maxLoad]);
-                    setAlgorithm(message.numData[RegisterPacket.algorithm]);
-                    setSimulationSpeed(message.numData[RegisterPacket.simulationSpeed] / 100);
-                    setUpdateSpeed(message.numData[RegisterPacket.updateSpeed] / 100);
+                    setFloors(packet.numData[RegisterPacket.floors]);
+                    setMaxLoad(packet.numData[RegisterPacket.maxLoad]);
+                    setAlgorithm(packet.numData[RegisterPacket.algorithm]);
+                    setSimulationSpeed(packet.numData[RegisterPacket.simulationSpeed] / 100);
+                    setUpdateSpeed(packet.numData[RegisterPacket.updateSpeed] / 100);
                     setGameState(GameState.PAUSED);
                     setElevators([]);
                 }
 
-                if (message.command === ServerCommand.ADD_ELEVATOR) {
+                if (packet.command === OpCode.ADD_ELEVATOR) {
                     const newElevator = new Elevator(
-                        message.numData[ElevatorPacket.id],
-                        message.numData[ElevatorPacket.currentFloor],
+                        packet.numData[ElevatorPacket.id],
+                        packet.numData[ElevatorPacket.currentFloor],
                     );
                     setElevators([...elevators, newElevator]);
                 }
 
-                if (message.command === ServerCommand.REMOVE_ELEVATOR) {
-                    const elevatorId = message.numData[ElevatorPacket.id];
+                if (packet.command === OpCode.REMOVE_ELEVATOR) {
+                    const elevatorId = packet.numData[ElevatorPacket.id];
                     setElevators(elevators.filter(elevator => elevator.id !== elevatorId));
                 }
 
-                if (message.command === ServerCommand.SET_SIMULATION_SPEED) {
-                    setSimulationSpeed(message.numData[0] / 100);
+                if (packet.command === OpCode.SET_SIMULATION_SPEED) {
+                    setSimulationSpeed(packet.numData[0] / 100);
                 }
 
-                if (message.command === ServerCommand.SET_UPDATE_SPEED) {
-                    setUpdateSpeed(message.numData[0] / 100);
+                if (packet.command === OpCode.SET_UPDATE_SPEED) {
+                    setUpdateSpeed(packet.numData[0] / 100);
                 }
 
-                if (message.command === ServerCommand.SET_ALGORITHM) {
-                    setAlgorithm(message.numData[0]);
+                if (packet.command === OpCode.SET_ALGORITHM) {
+                    setAlgorithm(packet.numData[0]);
                 }
 
-                if (message.command === ServerCommand.SET_FLOORS) {
-                    setFloors(message.numData[0]);
+                if (packet.command === OpCode.SET_FLOORS) {
+                    setFloors(packet.numData[0]);
                 }
 
-                if (message.command === ServerCommand.SET_MAX_LOAD) {
-                    setMaxLoad(message.numData[0]);
+                if (packet.command === OpCode.SET_MAX_LOAD) {
+                    setMaxLoad(packet.numData[0]);
                 }
 
-                if (message.command === ServerCommand.START_SIMULATION) {
+                if (packet.command === OpCode.START_SIMULATION) {
                     setGameState(GameState.RUNNING);
                 }
 
-                if (message.command === ServerCommand.STOP_SIMULATION) {
+                if (packet.command === OpCode.STOP_SIMULATION) {
                     setGameState(GameState.PAUSED);
                 }
 
-                if (message.command === ServerCommand.DASHBOARD) {
-                    console.log(message.readString())
+                if (packet.command === OpCode.DASHBOARD) {
+                    console.log(packet.readString())
                 }
             });
         }

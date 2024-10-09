@@ -1,8 +1,5 @@
-import Elevator from "@/models/Elevator";
-import { ServerCommand } from "@/models/Packet";
-import WSEvent from "@/models/WSEvent";
 import { Box, Typography } from "@mui/material";
-import { useEffect } from "react";
+import Elevator from "@/models/Elevator";
 
 export default function ElevatorPanel({elevators}: {elevators: Elevator[]}) {
     return <Box>{
