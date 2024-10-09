@@ -130,6 +130,13 @@ export default function ControlPanel(
         }
     }
 
+    function getDashboard() {
+        if (wsInstance !== null) {
+            const message = new ClientMessage(ClientCommand.DASHBOARD);
+            message.send(wsInstance);
+        }
+    }
+
     return <Grid container>
         <Grid xs={12}>
             <Typography fontSize="1.25em" fontWeight="bold">Control Panel</Typography>
@@ -234,6 +241,7 @@ export default function ControlPanel(
             </Box>
 
             <Button onClick={updateCol2}>Set</Button>
+            <Button onClick={getDashboard}>Dashboard</Button>
         </Grid>
     </Grid>
 }

@@ -14,7 +14,7 @@ class OpCode:
         SET_SIMULATION_SPEED = 3  # (int: speed)
         ADD_PASSENGER = 4  # (int: initial, int: destination)
         ADD_PASSENGERS = 5  # (int: count, (int: initial, int: destination) * count)
-        SET_ALGORITHM = 6  # TODO (int: algorithm_names)
+        SET_ALGORITHM = 6  # (int: algorithm_names)
         SET_MAX_LOAD = 7  # (int: new_max_load)
         STOP_SIMULATION = 8
         START_SIMULATION = 9
@@ -22,6 +22,7 @@ class OpCode:
         ADD_LOAD = 11  # (int: initial, int: destination)
         REMOVE_LOAD = 12  # (int: load_id)
         SET_UPDATE_SPEED = 13  # (int: update_speed)
+        DASHBOARD = 14
 
     class Server(IntEnum):
         NEW_SIMULATION = 0
@@ -41,6 +42,7 @@ class OpCode:
         STOP_SIMULATION = 14
         START_SIMULATION = 15
         SET_MAX_LOAD = 16
+        DASHBOARD = 17
 
     class GameUpdate(IntEnum):
         MOVE_LOAD = 8
@@ -71,3 +73,4 @@ class CloseReason:
 
 class ErrorCode:
     BAD_ARGUMENT = 0
+    UNEXPECTED_ERROR = 1

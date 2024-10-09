@@ -44,12 +44,12 @@ class ClientPacket:
 
         Message Structure
             4 bytes: start
-            4 bytes: Command
-            4 bytes: length (n)
+            2 bytes: Command
+            2 bytes: length (n)
             [
                 n bytes: data
             ]
-            4 bytes: checksum (length, data)
+            2 bytes: checksum (length, data)
             4 bytes: end
 
         Raises: InvalidStartBytesError, IncompletePacketError, InvalidChecksumError
@@ -65,7 +65,7 @@ class ClientPacket:
 
         self.length = self._read_int()
 
-        if self.length + 4 * 5 != len(self.raw_data):
+        if self.length + 8 + 6 != len(self.raw_data):
             raise IncompletePacketError
 
         if not self._verify_checksum():
@@ -73,8 +73,8 @@ class ClientPacket:
 
     def _verify_checksum(self) -> bool:
         """Verifies the checksum of the packet"""
-        checksum_message = self.raw_data[8:-8]
-        checksum = self.raw_data[-8:-4]
+        checksum_message = self.raw_data[6:-6]
+        checksum = self.raw_data[-6:-4]
         expected_checksum = int(md5(checksum_message).hexdigest()[-3:], 16) % 10
         actual_checksum = b2i(checksum)
         return expected_checksum == actual_checksum
@@ -87,12 +87,17 @@ class ClientPacket:
 
     def _read_int(self) -> int:
         """Reads the next 4 bytes from the packet as an integer"""
-        return b2i(self._read_bytes(4))
+        return b2i(self._read_bytes(2))
+
+    def _read_str(self) -> int:
+        """Read the next 4 * length bytes as an ascii string"""
+        length = self._read_int()
+        return self._read_bytes(length).decode('ascii')
 
     @property
     def data(self) -> Tuple[int]:
         """Returns the data of the packet as a list of integers"""
-        return tuple(str(b2i(self.raw_data[n:n + 4])) for n in range(12, len(self.raw_data) - 8, 4))
+        return tuple(str(b2i(self.raw_data[n:n + 2])) for n in range(8, len(self.raw_data) - 6, 2))
 
     async def execute_message(self) -> None:
         """Executes the packet on the manager"""
@@ -176,7 +181,7 @@ class ClientPacket:
                 manager.start_simulation()
                 await self.ack()
 
-    async def ack(self, *additional_data: int) -> None:
+    async def ack(self, *additional_data: int | bytes | str) -> None:
         """Replies to the client with a server packet
         and the given data
 
@@ -193,20 +198,28 @@ class ClientPacket:
 
     def __str__(self) -> str:
         """Returns a string representation of the packet"""
-        return f'<ClientMessage command={self.command.name} data=[{", ".join(self.data)}]>'
+        return f'<ClientPacket command={self.command.name} data=[{", ".join(self.data)}]>'
 
 
 class ServerPacket:
     def __init__(
-        self, command: OpCode.Server, data: List[int] = None
+        self, command: OpCode.Server, data: List[int | bytes | str] = None
     ) -> None:
         """Creates a server packet"""
         self.command = command
 
+        self.data = b''
         if data is not None:
-            self.data = b''.join(map(i2b, data))
-        else:
-            self.data = b''
+            for n in data:
+                if isinstance(n, int):
+                    self.data += i2b(n)
+                elif isinstance(n, bytes):
+                    self.data += n
+                elif isinstance(n, str):
+                    self.data += i2b(len(n))
+                    self.data += n.encode('ascii')
+                else:
+                    raise ValueError(f'Invalid data type {type(n)} in {data}')
 
     @property
     def length(self) -> int:
@@ -230,7 +243,7 @@ class ServerPacket:
             print('connection closed before message could be sent')
             pass
         else:
-            logger.debug(f'Sent message to {protocol.remote_address}: {self}')
+            logger.debug(f'Sent message to {protocol.remote_address[0]}:{protocol.remote_address[1]}: {self}')
 
     def __bytes__(self) -> bytes:
         """Converts the packet to bytes as per the packet format
@@ -258,6 +271,5 @@ class ServerPacket:
 
     def __str__(self) -> str:
         """Returns a string representation of the message"""
-        integer_data = [str(b2i(self.data[n:n + 4])) for n in range(0, len(self.data), 4)]
-        return f'<ServerMessage command={self.command.name} data=[{', '.join(integer_data)}]>'
-    # convert 12th index onwards to integers
+        integer_data = [str(b2i(self.data[n:n + 2])) for n in range(0, len(self.data), 2)]
+        return f'<ServerPacket command={self.command.name} data=[{', '.join(integer_data)}]>'

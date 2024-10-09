@@ -24,6 +24,7 @@ enum ClientCommand {
     ADD_LOAD = 11,  // (int: initial, int: destination)
     REMOVE_LOAD = 12,  // (int: load_id)
     SET_UPDATE_SPEED = 13,  // (int: update_speed)
+    DASHBOARD = 14,
 }
 
 enum ServerCommand {
@@ -43,7 +44,8 @@ enum ServerCommand {
     SET_ALGORITHM = 13,
     STOP_SIMULATION = 14,
     START_SIMULATION = 15,
-    SET_MAX_LOAD = 16
+    SET_MAX_LOAD = 16,
+    DASHBOARD = 17
 }
 
 enum GameState {

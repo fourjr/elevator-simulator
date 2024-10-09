@@ -57,7 +57,7 @@ class ServerPacket {
     command: ServerCommand
     length: number
     raw_data: Uint8Array
-    data: number[]
+    numData: number[]
 
     private cursor: number = 0
 
@@ -77,7 +77,7 @@ class ServerPacket {
         this.command = this.readInt() as ServerCommand
         this.length = this.readInt()
 
-        if (this.length + 4 * 5 !== this.raw_data.length) {
+        if (this.length + 8 + 6 !== this.raw_data.length) {
             throw new Error("Invalid length" + this.length + " " + this.raw_data.length)
         }
 
@@ -85,16 +85,18 @@ class ServerPacket {
             throw new Error("Invalid checksum")
         }
 
-        this.data = []
-        while (this.cursor < this.raw_data.length - 8) {
-            this.data.push(this.readInt())
+        this.numData = []
+        while (this.cursor < this.raw_data.length - 6) {
+            this.numData.push(this.readInt())
         }
+        // reset cursor
+        this.cursor = 8;
     }
 
     private verifyChecksum(): boolean {
         let hash = new Md5();
         hash.appendByteArray(
-            this.raw_data.slice(8, -8)
+            this.raw_data.slice(6, -6)
         )
         const hexResult = hash.end();
         if (hexResult === undefined || typeof hexResult !== "string") {
@@ -102,7 +104,7 @@ class ServerPacket {
         }
         const result = parseInt(hexResult.slice(-3), 16);
 
-        const checksumValue = b2i(this.raw_data.slice(-8, -4))
+        const checksumValue = b2i(this.raw_data.slice(-6, -4))
         return result % 10 === checksumValue
     }
 
@@ -113,21 +115,38 @@ class ServerPacket {
     }
 
     readInt(): number {
-        return b2i(this.readBytes(4))
+        return b2i(this.readBytes(2))
+    }
+
+    readString() : string {
+        const length = this.readInt();
+        const data = this.readBytes(length);
+        let result = "";
+        for (let i = 0; i < length; i++) {
+            result += String.fromCharCode(data[i]);
+        }
+        return result;
     }
 }
 
 function i2b(num: number): Uint8Array {
     return new Uint8Array([
-        (num >> 24) & 0xFF,
-        (num >> 16) & 0xFF,
+        num & 0xFF,
         (num >> 8) & 0xFF,
-        num & 0xFF
     ])
 }
 
 function b2i(bytes: Uint8Array): number {
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]
+    // convert 2 bytes to a number little endian
+    return (bytes[1] << 8) | bytes[0]
+}
+
+function s2b(str: string): Uint8Array {
+    const result = new Uint8Array(str.length)
+    for (let i = 0; i < str.length; i++) {
+        result[i] = str.charCodeAt(i)
+    }
+    return concatByteArray(i2b(str.length), result)
 }
 
 function concatByteArray(...arrays: Uint8Array[]): Uint8Array {

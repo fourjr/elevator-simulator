@@ -38,50 +38,50 @@ export default function Home() {
                 const event = new Event('wsMessage') as WSEvent;
                 event.message = message;
                 document.dispatchEvent(event);
-                console.log(`Message received from server: ${ServerCommand[message.command]}`)
+                console.log(`Message received from server: ${ServerCommand[message.command]} ${message.numData}`)
 
                 if (message.command === ServerCommand.NEW_SIMULATION) {
                     // reset
-                    setFloors(message.data[RegisterPacket.floors]);
-                    setMaxLoad(message.data[RegisterPacket.maxLoad]);
-                    setAlgorithm(message.data[RegisterPacket.algorithm]);
-                    setSimulationSpeed(message.data[RegisterPacket.simulationSpeed]);
-                    setUpdateSpeed(message.data[RegisterPacket.updateSpeed]);
+                    setFloors(message.numData[RegisterPacket.floors]);
+                    setMaxLoad(message.numData[RegisterPacket.maxLoad]);
+                    setAlgorithm(message.numData[RegisterPacket.algorithm]);
+                    setSimulationSpeed(message.numData[RegisterPacket.simulationSpeed]);
+                    setUpdateSpeed(message.numData[RegisterPacket.updateSpeed]);
                     setGameState(GameState.PAUSED);
                     setElevators([]);
                 }
 
                 if (message.command === ServerCommand.ADD_ELEVATOR) {
                     const newElevator = new Elevator(
-                        message.data[ElevatorPacket.id],
-                        message.data[ElevatorPacket.currentFloor],
+                        message.numData[ElevatorPacket.id],
+                        message.numData[ElevatorPacket.currentFloor],
                     );
                     setElevators([...elevators, newElevator]);
                 }
 
                 if (message.command === ServerCommand.REMOVE_ELEVATOR) {
-                    const elevatorId = message.data[ElevatorPacket.id];
+                    const elevatorId = message.numData[ElevatorPacket.id];
                     setElevators(elevators.filter(elevator => elevator.id !== elevatorId));
                 }
 
                 if (message.command === ServerCommand.SET_SIMULATION_SPEED) {
-                    setSimulationSpeed(message.data[0] / 100);
+                    setSimulationSpeed(message.numData[0] / 100);
                 }
 
                 if (message.command === ServerCommand.SET_UPDATE_SPEED) {
-                    setUpdateSpeed(message.data[0] / 100);
+                    setUpdateSpeed(message.numData[0] / 100);
                 }
 
                 if (message.command === ServerCommand.SET_ALGORITHM) {
-                    setAlgorithm(message.data[0]);
+                    setAlgorithm(message.numData[0]);
                 }
 
                 if (message.command === ServerCommand.SET_FLOORS) {
-                    setFloors(message.data[0]);
+                    setFloors(message.numData[0]);
                 }
 
                 if (message.command === ServerCommand.SET_MAX_LOAD) {
-                    setMaxLoad(message.data[0]);
+                    setMaxLoad(message.numData[0]);
                 }
 
                 if (message.command === ServerCommand.START_SIMULATION) {
@@ -90,6 +90,10 @@ export default function Home() {
 
                 if (message.command === ServerCommand.STOP_SIMULATION) {
                     setGameState(GameState.PAUSED);
+                }
+
+                if (message.command === ServerCommand.DASHBOARD) {
+                    console.log(message.readString())
                 }
             });
         }
