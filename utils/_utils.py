@@ -37,7 +37,7 @@ def save_algorithm(algorithm, fn=None) -> str:
 def split_array(a, n) -> Generator[Tuple[int], None, None]:
     """https://stackoverflow.com/a/2135920/8129786"""
     k, m = divmod(len(a), n)
-    return (a[(i % len(a)) * k + min(i % len(a), m) : (i + 1) * k + min((i % len(a)) + 1, m)] for i in range(n))
+    return (a[(i % len(a)) * k + min(i % len(a), m): (i + 1) * k + min((i % len(a)) + 1, m)] for i in range(n))
 
 
 def jq_join_timeout(jq, timeout) -> None:

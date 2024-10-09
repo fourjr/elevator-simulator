@@ -6,7 +6,6 @@ from typing import List, Tuple
 
 from websockets import ConnectionClosed
 
-from models.algorithm import ElevatorAlgorithm
 from utils import InvalidStartBytesError, IncompletePacketError, InvalidChecksumError, i2b, b2i, algo_to_enum
 from utils.errors import BadArgumentError, NoManagerError
 from web.backend.constants import Algorithms, ErrorCode, PacketConstants, OpCode
@@ -93,7 +92,7 @@ class ClientPacket:
     @property
     def data(self) -> Tuple[int]:
         """Returns the data of the packet as a list of integers"""
-        return tuple(str(b2i(self.raw_data[n:n+4])) for n in range(12, len(self.raw_data) - 8, 4))
+        return tuple(str(b2i(self.raw_data[n:n + 4])) for n in range(12, len(self.raw_data) - 8, 4))
 
     async def execute_message(self) -> None:
         """Executes the packet on the manager"""
@@ -259,6 +258,6 @@ class ServerPacket:
 
     def __str__(self) -> str:
         """Returns a string representation of the message"""
-        integer_data = [str(b2i(self.data[n:n+4])) for n in range(0, len(self.data), 4)]
+        integer_data = [str(b2i(self.data[n:n + 4])) for n in range(0, len(self.data), 4)]
         return f'<ServerMessage command={self.command.name} data=[{', '.join(integer_data)}]>'
     # convert 12th index onwards to integers

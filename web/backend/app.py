@@ -17,7 +17,7 @@ class WebsocketApp:
     _id_iter = itertools.count()
 
     def __init__(self) -> None:
-        self.pool = AsyncioManagerPool(1,3)
+        self.pool = AsyncioManagerPool(3, 10)
         self.connections: Dict[int, AsyncWebManager] = {}
         self.server: WebSocketServer = None
 

@@ -1,6 +1,3 @@
-import websockets
-
-
 class ElevatorError(Exception):
     pass
 

@@ -94,4 +94,3 @@ class BaseWindow(wx.Frame):
     @property
     def floors(self):
         return self.manager.algorithm.floors
-

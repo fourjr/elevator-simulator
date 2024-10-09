@@ -125,4 +125,3 @@ class StatsPanel(scrolled.ScrolledPanel):
         sz.SetDimension(0, 0, 350, 250)
 
         self.nb.AddPage(panel, 'Elevators')
-
