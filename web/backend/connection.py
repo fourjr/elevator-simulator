@@ -25,7 +25,7 @@ class WSConnection:
         """Parse a message from the client"""
         logger.debug(f'Processing message from {self.protocol.remote_address}')
         try:
-            parsed_message = ClientPacket(self.current_message + raw_message)
+            parsed_message = ClientPacket(self, self.current_message + raw_message)
         except InvalidStartBytesError:
             logger.warning(f'Message by {self.protocol.remote_address} has invalid start bytes')
             await self.close()
@@ -58,7 +58,7 @@ class WSConnection:
                 self.manager.ws_connection = self
                 self.app.connections[self.client_id] = self.manager
 
-        await parsed_message.execute_message(self.manager)
+        await parsed_message.execute_message()
 
     @classmethod
     async def process_connection(cls, app, protocol):

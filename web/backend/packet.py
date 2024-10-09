@@ -2,13 +2,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from hashlib import md5
-from typing import List
+from typing import List, Tuple
 
 from websockets import ConnectionClosed
 
 from models.algorithm import ElevatorAlgorithm
 from utils import InvalidStartBytesError, IncompletePacketError, InvalidChecksumError, i2b, b2i, algo_to_enum
-from utils.errors import BadArgumentError
+from utils.errors import BadArgumentError, NoManagerError
 from web.backend.constants import Algorithms, ErrorCode, PacketConstants, OpCode
 
 
@@ -23,15 +23,19 @@ class ClientPacket:
 
     _cursor: int = 0
 
-    def __init__(self, raw_data) -> None:
+    def __init__(self, connection: 'WSConnection', raw_data) -> None:
         """Creates a client packet from raw data and parses it
         If no error has been raised, the packet is valid
+
+        connection: WSConnection
+            The connection object that the packet came from
 
         raw_data: bytes
             The raw message data from the websocket
 
         Raises: InvalidStartBytesError, IncompletePacketError, InvalidChecksumError
         """
+        self.connection = connection
         self.raw_data = raw_data
         self._parse()
 
@@ -86,75 +90,60 @@ class ClientPacket:
         """Reads the next 4 bytes from the packet as an integer"""
         return b2i(self._read_bytes(4))
 
-    async def execute_message(self, manager: 'AsyncWebManager') -> None:
+    @property
+    def data(self) -> Tuple[int]:
+        """Returns the data of the packet as a list of integers"""
+        return tuple(str(b2i(self.raw_data[n:n+4])) for n in range(12, len(self.raw_data) - 8, 4))
+
+    async def execute_message(self) -> None:
         """Executes the packet on the manager"""
+        manager = self.connection.manager
         if manager is None:
-            raise ValueError('No manager supplied for execution')
+            raise NoManagerError('No manager available for execution in execute_message')
 
         match self.command:
             case OpCode.Client.ADD_ELEVATOR:
                 current_floor = self._read_int()
                 ev = manager.add_elevator(current_floor)
-                await self.reply(
-                    OpCode.Server.ADD_ELEVATOR, manager.ws_connection.protocol,
-                    [ev.id, ev.current_floor]
-                )
+                await self.ack(ev.id)
 
             case OpCode.Client.REMOVE_ELEVATOR:
                 ev_id = self._read_int()
                 try:
                     manager.remove_elevator(ev_id)
                 except BadArgumentError:
-                    await self.reply(
-                        OpCode.Server.ERROR, manager.ws_connection.protocol,
-                        [ErrorCode.BAD_ARGUMENT]
-                    )
+                    await self.error(ErrorCode.BAD_ARGUMENT)
                 else:
-                    await self.reply(
-                        OpCode.Server.REMOVE_ELEVATOR, manager.ws_connection.protocol,
-                        [ev_id]
-                    )
+                    await self.ack()
 
             case OpCode.Client.SET_FLOORS:
                 floor_count = self._read_int()
                 manager.set_floors(floor_count)
-                await self.reply(
-                    OpCode.Server.SET_FLOORS, manager.ws_connection.protocol,
-                    [floor_count]
-                )
+                await self.ack()
 
             case OpCode.Client.SET_SIMULATION_SPEED:
                 speed = self._read_int() / 100
                 manager.set_speed(speed)
-                await self.reply(
-                    OpCode.Server.SET_SIMULATION_SPEED, manager.ws_connection.protocol,
-                    [speed * 100]
-                )
+                await self.ack()
+
             case OpCode.Client.SET_UPDATE_SPEED:
                 speed = self._read_int() / 100
-                manager.ws_connection.update_speed = speed  # TODO
-                await self.reply(
-                    OpCode.Server.SET_UPDATE_SPEED, manager.ws_connection.protocol,
-                    [speed * 100]
-                )
+                self.connection.update_speed = speed  # TODO
+                await self.ack()
+
             case OpCode.Client.ADD_PASSENGER:
                 floor_i = self._read_int()
                 floor_d = self._read_int()
                 manager.add_passenger(floor_i, floor_d)
-                await self.reply(
-                    OpCode.Server.ADD_PASSENGER, manager.ws_connection.protocol,
-                    [floor_i, floor_d]
-                )
+                await self.ack()
+
             case OpCode.Client.ADD_PASSENGERS:
                 count = self._read_int()
                 passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
                 manager.add_passengers(passengers)
 
-                await self.reply(
-                    OpCode.Server.ADD_PASSENGERS, manager.ws_connection.protocol,
-                    [count, *sum(passengers, ())]
-                    # flatten passengers
-                )
+                # flatten passengers
+                await self.ack()
 
             case OpCode.Client.SET_ALGORITHM:
                 algorithm_id = self._read_int()
@@ -162,49 +151,50 @@ class ClientPacket:
                 cls = manager.algorithms[algorithm_name]
                 manager.set_algorithm(cls)
 
-                await self.reply(
-                    OpCode.Server.SET_ALGORITHM, manager.ws_connection.protocol,
-                    [algorithm_id]
-                )
+                await self.ack()
 
             case OpCode.Client.SET_MAX_LOAD:
                 max_load = self._read_int()
                 manager.set_max_load(max_load)
-                await self.reply(
-                    OpCode.Server.SET_MAX_LOAD, manager.ws_connection.protocol,
-                    [max_load]
-                )
+                await self.ack()
 
             case OpCode.Client.NEW_SIMULATION:
                 manager.reset()
-                # (int: floors, int: speed, int: max_load, strL algorithm, int: seed, int: simulation_speed, int: update_speed)
-                await self.reply(OpCode.Server.NEW_SIMULATION, manager.ws_connection.protocol, [
+                # floors, max_load, algorithm_id, simulation_speed, update_speed
+                await self.ack(
                     manager.algorithm.floors,
                     manager.algorithm.max_load,
                     algo_to_enum(manager.algorithm.__class__),
                     manager.speed,
-                    manager.ws_connection.update_speed
-                ])
+                    self.connection.update_speed
+                )
+
             case OpCode.Client.STOP_SIMULATION:
                 manager.pause()
-                await self.reply(OpCode.Server.STOP_SIMULATION, manager.ws_connection.protocol)
+                await self.ack()
 
             case OpCode.Client.START_SIMULATION:
-                manager.play()
-                await self.reply(OpCode.Server.START_SIMULATION, manager.ws_connection.protocol)
+                manager.start_simulation()
+                await self.ack()
 
-    async def reply(self, opcode, connection, data: List[int] = None) -> None:
-        """Replies to the client with a server packet"""
-        await ServerPacket(opcode, data).send(connection)
+    async def ack(self, *additional_data: int) -> None:
+        """Replies to the client with a server packet
+        and the given data
 
-    async def ack(self, connection) -> None:
-        """Sends an ACK packet to the client"""
-        await self.reply(OpCode.Server.ACK, connection)
+        additional_data: int*
+            Additional data to send at the front of the ACK packet
+        """
+        opcode = OpCode.Server[self.command.name]  # guess the opcode from the original packet
+        new_data = additional_data + self.data
+        await ServerPacket(opcode, new_data).send(self.connection.protocol)
+
+    async def error(self, error_code) -> None:
+        """Sends an ERROR packet to the client"""
+        await ServerPacket(OpCode.Server.ERROR, [error_code]).send(self.connection.protocol)
 
     def __str__(self) -> str:
         """Returns a string representation of the packet"""
-        integer_data = [str(b2i(self.raw_data[n:n+4])) for n in range(12, len(self.raw_data) - 8, 4)]
-        return f'<ClientMessage command={self.command.name} data=[{", ".join(integer_data)}]>'
+        return f'<ClientMessage command={self.command.name} data=[{", ".join(self.data)}]>'
 
 
 class ServerPacket:
@@ -233,15 +223,15 @@ class ServerPacket:
         ])
         return int(md5(checksum_message).hexdigest()[-3:], 16) % 10
 
-    async def send(self, connection):
+    async def send(self, protocol):
         """Sends the packet to the client"""
         try:
-            await connection.send(bytes(self))
+            await protocol.send(bytes(self))
         except ConnectionClosed:
             print('connection closed before message could be sent')
             pass
         else:
-            logger.debug(f'Sent message to {connection.remote_address}: {self}')
+            logger.debug(f'Sent message to {protocol.remote_address}: {self}')
 
     def __bytes__(self) -> bytes:
         """Converts the packet to bytes as per the packet format

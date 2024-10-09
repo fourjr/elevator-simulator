@@ -41,6 +41,7 @@ export default function Home() {
                 console.log(`Message received from server: ${ServerCommand[message.command]}`)
 
                 if (message.command === ServerCommand.NEW_SIMULATION) {
+                    // reset
                     setFloors(message.data[RegisterPacket.floors]);
                     setMaxLoad(message.data[RegisterPacket.maxLoad]);
                     setAlgorithm(message.data[RegisterPacket.algorithm]);

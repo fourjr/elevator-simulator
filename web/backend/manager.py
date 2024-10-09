@@ -53,12 +53,10 @@ class AsyncWebManager(ElevatorManager):
             f'{self.name=} START',
         )
         self._running = True
-        task = asyncio.create_task(self.loop())
-        self.loop.run_in_executor(None, task)
+        asyncio_loop = asyncio.get_event_loop()
+        asyncio_loop.run_in_executor(None, self.loop)
         # thread = threading.Thread(target=self.loop)
         # thread.start()
-
-        # self.loop()
 
     def on_simulation_end(self):
         self.end_test_simulation()
@@ -72,7 +70,7 @@ class AsyncWebManager(ElevatorManager):
     def log_message(self, origin, level, message):
         fmt = f'[{origin.name}] [{level.name[0]}] {message}'
         print(fmt)
-        self.ws_info[0].log(self.ws_info[1], fmt)
+        # TODO
 
 
 class AsyncioManagerPool:
