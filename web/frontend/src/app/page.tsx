@@ -45,8 +45,8 @@ export default function Home() {
                     setFloors(message.numData[RegisterPacket.floors]);
                     setMaxLoad(message.numData[RegisterPacket.maxLoad]);
                     setAlgorithm(message.numData[RegisterPacket.algorithm]);
-                    setSimulationSpeed(message.numData[RegisterPacket.simulationSpeed]);
-                    setUpdateSpeed(message.numData[RegisterPacket.updateSpeed]);
+                    setSimulationSpeed(message.numData[RegisterPacket.simulationSpeed] / 100);
+                    setUpdateSpeed(message.numData[RegisterPacket.updateSpeed] / 100);
                     setGameState(GameState.PAUSED);
                     setElevators([]);
                 }

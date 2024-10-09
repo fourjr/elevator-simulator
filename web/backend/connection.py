@@ -54,7 +54,7 @@ class WSConnection:
                     # No manager, try again later. Server at max capacity.
                     logger.warning(f'No managers available for {self.address}')
                     await ServerPacket(
-                        OpCode.Server.CLOSE, [CloseReason.NO_MANAGER]
+                        OpCode.CLOSE, [CloseReason.NO_MANAGER]
                     ).send(self.protocol)
 
                     await self.close()
@@ -63,9 +63,8 @@ class WSConnection:
                     self.manager.ws_connection = self
                     self.app.connections[self.client_id] = self.manager
 
-            if packet.command == OpCode.Client.DASHBOARD:
+            if packet.command == OpCode.DASHBOARD:
                 await packet.ack(
-                    'hello',
                     self.app.pool.min_managers,
                     self.app.pool.max_managers,
                     len(self.app.pool.taken_managers),
@@ -75,7 +74,7 @@ class WSConnection:
             else:
                 await packet.execute_message()
         except Exception as e:
-            await ServerPacket(OpCode.Server.ERROR, [ErrorCode.UNEXPECTED_ERROR]).send(self.protocol)
+            await ServerPacket(OpCode.ERROR, [ErrorCode.UNEXPECTED_ERROR]).send(self.protocol)
             logger.exception(f'Error processing message from {self.address}', exc_info=e)
 
     @classmethod

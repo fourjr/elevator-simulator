@@ -61,7 +61,7 @@ class ClientPacket:
         if self.raw_data[-4:] != PacketConstants.END_BYTES:
             raise IncompletePacketError
 
-        self.command = OpCode.Client(self._read_int())
+        self.command = OpCode(self._read_int())
 
         self.length = self._read_int()
 
@@ -86,18 +86,18 @@ class ClientPacket:
         return result
 
     def _read_int(self) -> int:
-        """Reads the next 4 bytes from the packet as an integer"""
+        """Reads the next 2 bytes from the packet as an integer"""
         return b2i(self._read_bytes(2))
 
     def _read_str(self) -> int:
-        """Read the next 4 * length bytes as an ascii string"""
+        """Read the next length bytes as an ascii string"""
         length = self._read_int()
         return self._read_bytes(length).decode('ascii')
 
     @property
     def data(self) -> Tuple[int]:
         """Returns the data of the packet as a list of integers"""
-        return tuple(str(b2i(self.raw_data[n:n + 2])) for n in range(8, len(self.raw_data) - 6, 2))
+        return tuple((b2i(self.raw_data[n:n + 2])) for n in range(8, len(self.raw_data) - 6, 2))
 
     async def execute_message(self) -> None:
         """Executes the packet on the manager"""
@@ -106,12 +106,12 @@ class ClientPacket:
             raise NoManagerError('No manager available for execution in execute_message')
 
         match self.command:
-            case OpCode.Client.ADD_ELEVATOR:
+            case OpCode.ADD_ELEVATOR:
                 current_floor = self._read_int()
                 ev = manager.add_elevator(current_floor)
                 await self.ack(ev.id)
 
-            case OpCode.Client.REMOVE_ELEVATOR:
+            case OpCode.REMOVE_ELEVATOR:
                 ev_id = self._read_int()
                 try:
                     manager.remove_elevator(ev_id)
@@ -120,28 +120,22 @@ class ClientPacket:
                 else:
                     await self.ack()
 
-            case OpCode.Client.SET_FLOORS:
+            case OpCode.SET_FLOORS:
                 floor_count = self._read_int()
                 manager.set_floors(floor_count)
                 await self.ack()
 
-            case OpCode.Client.SET_SIMULATION_SPEED:
+            case OpCode.SET_SIMULATION_SPEED:
                 speed = self._read_int() / 100
                 manager.set_speed(speed)
                 await self.ack()
 
-            case OpCode.Client.SET_UPDATE_SPEED:
+            case OpCode.SET_UPDATE_SPEED:
                 speed = self._read_int() / 100
                 self.connection.update_speed = speed  # TODO
                 await self.ack()
 
-            case OpCode.Client.ADD_PASSENGER:
-                floor_i = self._read_int()
-                floor_d = self._read_int()
-                manager.add_passenger(floor_i, floor_d)
-                await self.ack()
-
-            case OpCode.Client.ADD_PASSENGERS:
+            case OpCode.ADD_PASSENGERS:
                 count = self._read_int()
                 passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
                 manager.add_passengers(passengers)
@@ -149,7 +143,7 @@ class ClientPacket:
                 # flatten passengers
                 await self.ack()
 
-            case OpCode.Client.SET_ALGORITHM:
+            case OpCode.SET_ALGORITHM:
                 algorithm_id = self._read_int()
                 algorithm_name = Algorithms(algorithm_id).name.replace('_', ' ')
                 cls = manager.algorithms[algorithm_name]
@@ -157,27 +151,27 @@ class ClientPacket:
 
                 await self.ack()
 
-            case OpCode.Client.SET_MAX_LOAD:
+            case OpCode.SET_MAX_LOAD:
                 max_load = self._read_int()
                 manager.set_max_load(max_load)
                 await self.ack()
 
-            case OpCode.Client.NEW_SIMULATION:
+            case OpCode.NEW_SIMULATION:
                 manager.reset()
                 # floors, max_load, algorithm_id, simulation_speed, update_speed
                 await self.ack(
                     manager.algorithm.floors,
                     manager.algorithm.max_load,
                     algo_to_enum(manager.algorithm.__class__),
-                    manager.speed,
-                    self.connection.update_speed
+                    int(manager.speed * 100),
+                    int(self.connection.update_speed * 100)
                 )
 
-            case OpCode.Client.STOP_SIMULATION:
+            case OpCode.STOP_SIMULATION:
                 manager.pause()
                 await self.ack()
 
-            case OpCode.Client.START_SIMULATION:
+            case OpCode.START_SIMULATION:
                 manager.start_simulation()
                 await self.ack()
 
@@ -188,22 +182,21 @@ class ClientPacket:
         additional_data: int*
             Additional data to send at the front of the ACK packet
         """
-        opcode = OpCode.Server[self.command.name]  # guess the opcode from the original packet
         new_data = additional_data + self.data
-        await ServerPacket(opcode, new_data).send(self.connection.protocol)
+        await ServerPacket(self.command, new_data).send(self.connection.protocol)
 
     async def error(self, error_code) -> None:
         """Sends an ERROR packet to the client"""
-        await ServerPacket(OpCode.Server.ERROR, [error_code]).send(self.connection.protocol)
+        await ServerPacket(OpCode.ERROR, [error_code]).send(self.connection.protocol)
 
     def __str__(self) -> str:
         """Returns a string representation of the packet"""
-        return f'<ClientPacket command={self.command.name} data=[{", ".join(self.data)}]>'
+        return f'<ClientPacket command={self.command.name} data=[{", ".join(map(str, self.data))}]>'
 
 
 class ServerPacket:
     def __init__(
-        self, command: OpCode.Server, data: List[int | bytes | str] = None
+        self, command: OpCode, data: List[int | bytes | str] = None
     ) -> None:
         """Creates a server packet"""
         self.command = command

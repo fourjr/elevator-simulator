@@ -17,7 +17,7 @@ export default function ControlPanel(
     const [newElevatorFloor, setNewElevatorFloor] = useState(1);
     const [removeElevatorId, setRemoveElevatorId] = useState(1);
     const [addPassengerStartFloor, setAddPassengerStartFloor] = useState(1);
-    const [addPassengerEndFloor, setAddPassengerEndFloor] = useState(1);
+    const [addPassengerEndFloor, setAddPassengerEndFloor] = useState(2);
     const [addRandomPassengerCount, setAddRandomPassengerCount] = useState<number | null>(1);
 
     const [floorInput, setFloorInput] = useState<number | null>(floorCount);
@@ -54,7 +54,7 @@ export default function ControlPanel(
 
     function addPassenger() {
         if (wsInstance !== null) {
-            const message = new ClientMessage(ClientCommand.ADD_PASSENGER, [addPassengerStartFloor, addPassengerEndFloor]);
+            const message = new ClientMessage(ClientCommand.ADD_PASSENGERS, [1, addPassengerStartFloor, addPassengerEndFloor]);
             message.send(wsInstance);
         }
     }

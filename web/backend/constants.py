@@ -6,53 +6,38 @@ class PacketConstants:
     END_BYTES = b'\xFF\xFF\xFF\xFF'
 
 
-class OpCode:
-    class Client(IntEnum):
-        ADD_ELEVATOR = 0  # (int: current_floor)
-        REMOVE_ELEVATOR = 1  # (int: elevator_id)
-        SET_FLOORS = 2  # (int: floor_count)
-        SET_SIMULATION_SPEED = 3  # (int: speed)
-        ADD_PASSENGER = 4  # (int: initial, int: destination)
-        ADD_PASSENGERS = 5  # (int: count, (int: initial, int: destination) * count)
-        SET_ALGORITHM = 6  # (int: algorithm_names)
-        SET_MAX_LOAD = 7  # (int: new_max_load)
-        STOP_SIMULATION = 8
-        START_SIMULATION = 9
-        NEW_SIMULATION = 10
-        ADD_LOAD = 11  # (int: initial, int: destination)
-        REMOVE_LOAD = 12  # (int: load_id)
-        SET_UPDATE_SPEED = 13  # (int: update_speed)
-        DASHBOARD = 14
+class OpCode(IntEnum):
+    CLOSE = 0
+    ERROR = 1
 
-    class Server(IntEnum):
-        NEW_SIMULATION = 0
-        ACK = 1
-        CLOSE = 2
-        GAME_UPDATE_STATE = 3
-        ADD_ELEVATOR = 4
-        REMOVE_ELEVATOR = 5
-        SET_FLOORS = 6
-        ADD_PASSENGER = 7
-        ADD_PASSENGERS = 8
-        GAME_STATE = 9
-        ERROR = 10
-        SET_SIMULATION_SPEED = 11
-        SET_UPDATE_SPEED = 12
-        SET_ALGORITHM = 13
-        STOP_SIMULATION = 14
-        START_SIMULATION = 15
-        SET_MAX_LOAD = 16
-        DASHBOARD = 17
+    NEW_SIMULATION = 2
+    START_SIMULATION = 3
+    STOP_SIMULATION = 4
 
-    class GameUpdate(IntEnum):
-        MOVE_LOAD = 8
-        SET_ALGORITHM = 6
-        SET_MAX_LOAD = 7
+    ADD_ELEVATOR = 5
+    REMOVE_ELEVATOR = 6
+    ADD_PASSENGERS = 7
+    SET_FLOORS = 8
+    SET_ALGORITHM = 9
+    SET_SIMULATION_SPEED = 10
+    SET_UPDATE_SPEED = 11
+    SET_MAX_LOAD = 12
 
-    class LogUpdate(IntEnum):
-        INFO = 0
-        WARNING = 1
-        ERROR = 2
+    GAME_UPDATE_STATE = 13
+
+    DASHBOARD = 20
+
+
+class GameUpdate(IntEnum):
+    MOVE_LOAD = 8
+    SET_ALGORITHM = 6
+    SET_MAX_LOAD = 7
+
+
+class LogUpdate(IntEnum):
+    INFO = 0
+    WARNING = 1
+    ERROR = 2
 
 
 class Algorithms(IntEnum):
