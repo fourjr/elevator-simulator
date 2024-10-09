@@ -88,6 +88,9 @@ class ClientPacket:
 
     async def execute_message(self, manager: 'AsyncWebManager') -> None:
         """Executes the packet on the manager"""
+        if manager is None:
+            raise ValueError('No manager supplied for execution')
+
         match self.command:
             case OpCode.Client.ADD_ELEVATOR:
                 current_floor = self._read_int()

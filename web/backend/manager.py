@@ -98,10 +98,10 @@ class AsyncioManagerPool:
                 if len(self.managers) >= self.max_managers:
                     raise NoManagerError('No managers available')
                 else:
-                    manager = AsyncWebManager()
-                    self.managers.append(manager)
-                    return manager
-            take = m[0]
+                    take = AsyncWebManager()
+                    self.managers.append(take)
+            else:
+                take = m[0]
             self.taken_managers.add(take.id)
             return take
 

@@ -49,9 +49,11 @@ class WSConnection:
                 # No manager, try again later. Server at max capacity.
                 logger.warning(f'No managers available for {self.protocol.remote_address}')
                 await ServerPacket(
-                    OpCode.Server.CLOSE, self.client_id, data=[CloseReason.NO_MANAGER]
+                    OpCode.Server.CLOSE, [CloseReason.NO_MANAGER]
                 ).send(self.protocol)
+
                 await self.close()
+                return
             else:
                 self.manager.ws_connection = self
                 self.app.connections[self.client_id] = self.manager
@@ -73,6 +75,8 @@ class WSConnection:
             await asyncio.wait_for(receive_first_message(), timeout=1)
         except asyncio.TimeoutError:
             logger.debug(f'Connection from {protocol.remote_address} timed out')
+        except websockets.ConnectionClosedOK:
+            pass
         else:
             # Connection verified to be active, continue processing as normal
             async for raw_message in protocol:
@@ -82,7 +86,7 @@ class WSConnection:
 
     async def close(self):
         """Closes the connection"""
-        if self.client_id is not None:
+        if self.client_id is not None and self.client_id in self.app.connections:
             self.app.connections.pop(self.client_id)
 
         if self.manager is not None:
