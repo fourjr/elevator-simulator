@@ -1,4 +1,5 @@
 from enum import IntEnum, Enum
+import logging
 
 
 class ID(IntEnum):
@@ -20,14 +21,6 @@ class ID(IntEnum):
 class Direction(IntEnum):
     UP = 1
     DOWN = -1
-
-
-class LogLevel(IntEnum):
-    TRACE = 1
-    DEBUG = 2
-    INFO = 3
-    WARNING = 4
-    ERROR = 5
 
 
 class LogOrigin(Enum):

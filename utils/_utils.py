@@ -1,4 +1,5 @@
 import gzip
+import logging
 import os
 import pickle
 from datetime import datetime
@@ -65,3 +66,24 @@ def b2i(data: bytes) -> int:
 def algo_to_enum(algo) -> int:
     """Converts an algorithm to an enum"""
     return Algorithms[algo.name.replace(' ', '_')]
+
+
+def log_levels():
+    """Returns a list of log levels"""
+    return {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL,
+    }
+
+
+def get_log_level(name) -> str:
+    """Returns the level int from name"""
+    return log_levels()[name]
+
+
+def get_log_name(level) -> str:
+    """Returns the name from the level int"""
+    return {v: k for k, v in log_levels().items()}[level]

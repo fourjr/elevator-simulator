@@ -1,6 +1,6 @@
 from utils._utils import save_algorithm, split_array, jq_join_timeout, i2b, b2i, algo_to_enum
 from utils.constants import (
-    Constants, LogLevel, LogOrigin, ID, ActionType,
+    Constants, LogOrigin, ID, ActionType,
     Direction, Infinity, Unicode, _InfinitySentinel
 )
 from utils.errors import (

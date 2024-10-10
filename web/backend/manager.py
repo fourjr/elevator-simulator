@@ -2,7 +2,7 @@ import asyncio
 from typing import List
 
 from models import ElevatorManager, load_algorithms
-from utils import Constants, LogLevel, LogOrigin, TestTimeoutError, NoManagerError
+from utils import Constants, LogOrigin, TestTimeoutError, NoManagerError
 from web.backend.connection import WSConnection
 
 
@@ -38,7 +38,7 @@ class AsyncWebManager(ElevatorManager):
             n_iter, settings = self.current_simulation
             self.log_message(
                 LogOrigin.TEST,
-                LogLevel.ERROR,
+                logging.ERROR,
                 f'{self.name=} TIMEOUT',
             )
             raise TestTimeoutError(self.name, n_iter, settings)
@@ -49,7 +49,7 @@ class AsyncWebManager(ElevatorManager):
     def start_simulation(self):
         self.log_message(
             LogOrigin.TEST,
-            LogLevel.ERROR,
+            logging.ERROR,
             f'{self.name=} START',
         )
         self._running = True

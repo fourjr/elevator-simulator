@@ -7,7 +7,7 @@ import wx.lib.newevent as wxne
 
 from gui import ElevatorManagerThread
 from models import LogMessage, load_algorithms
-from utils import ID, Constants, LogLevel
+from utils import ID, Constants
 
 
 class BaseWindow(wx.Frame):
@@ -78,7 +78,7 @@ class BaseWindow(wx.Frame):
         self.manager.join()
         self.Destroy()
 
-    def WriteToLog(self, level: LogLevel, message):
+    def WriteToLog(self, level: int, message):
         self.FindWindowById(ID.PANEL_DEBUG_LOG).OnLogUpdate(
             LogMessage(level, message, self.manager.algorithm.tick_count)
         )

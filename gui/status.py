@@ -1,7 +1,8 @@
+import logging
 import wx
 import wx.lib.scrolledpanel as scrolled
 
-from utils import Unicode, LogLevel
+from utils import Unicode
 
 
 class ElevatorStatusPanel(scrolled.ScrolledPanel):
@@ -62,7 +63,7 @@ class ElevatorStatusPanel(scrolled.ScrolledPanel):
             updated = True
 
         if updated:
-            self.window.WriteToLog(LogLevel.TRACE, 'ElevatorStatusPanel Layout Updated')
+            self.window.WriteToLog(logging.DEBUG, 'ElevatorStatusPanel Layout Updated')
             self.Layout()
             if before.floors != after.floors:
                 self.SetupScrolling()

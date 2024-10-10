@@ -1,9 +1,11 @@
+import logging
 from typing import List, Set
 
 import wx
 
-from utils import ID, LogLevel
+from utils import ID
 from models import log_message
+from utils._utils import get_log_level, get_log_name, log_levels
 
 
 class LogPanel(wx.Panel):
@@ -19,27 +21,27 @@ class LogPanel(wx.Panel):
         )
 
         self.log_messages: List[log_message.LogMessage] = []
-        self.log_levels: Set[LogLevel] = set(LogLevel)
-        self.log_levels.remove(LogLevel.TRACE)
-        self.log_levels.remove(LogLevel.DEBUG)
+        self.log_levels: Set[int] = set(log_levels().values())
+        self.log_levels.remove(logging.DEBUG)
         self.InitUI()
-        self.window.WriteToLog(LogLevel.INFO, 'Log started')
+        self.window.WriteToLog(logging.INFO, 'Log started')
 
     def OnLogUpdate(self, message):
         self.log_messages.append(message)
         if message.level in self.log_levels:
-            self.log_tc.AppendText(f'[{message.level.name[0]}] {message.tick}: {message.message}\n')
+            name = get_log_name(message.level)
+            self.log_tc.AppendText(f'[{name[0]}] {message.tick}: {message.message}\n')
 
     def OnLogLevelChanged(self, e):
         cb = e.GetEventObject()
         if e.IsChecked():
-            self.log_levels.add(LogLevel[cb.GetLabel()])
+            self.log_levels.add(get_log_level(cb.GetLabel()))
         else:
-            self.log_levels.remove(LogLevel[cb.GetLabel()])
+            self.log_levels.remove(get_log_level(cb.GetLabel()))
 
         filtered_log_messages = filter(lambda x: x.level in self.log_levels, self.log_messages)
         self.log_tc.SetValue(
-            '\n'.join(f'[{i.level.name[0]}] {i.tick}: {i.message}' for i in filtered_log_messages) + '\n'
+            '\n'.join(f'[{get_log_name(i.level)[0]}] {i.tick}: {i.message}' for i in filtered_log_messages) + '\n'
         )
         # scroll to bottom
         self.log_tc.SetScrollPos(wx.VERTICAL, self.log_tc.GetScrollRange(wx.VERTICAL))
@@ -61,8 +63,8 @@ class LogPanel(wx.Panel):
 
         checkbox_sz = wx.FlexGridSizer(3, 1, 1)
 
-        for i in LogLevel:
-            cb = wx.CheckBox(self, wx.ID_ANY, i.name)
+        for i in log_levels().keys():
+            cb = wx.CheckBox(self, wx.ID_ANY, i)
             if i in self.log_levels:
                 cb.SetValue(True)
             checkbox_sz.Add(cb)

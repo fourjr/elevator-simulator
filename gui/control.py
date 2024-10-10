@@ -1,10 +1,11 @@
+import logging
 import os
 import random
 
 import wx
 import wx.aui as aui
 
-from utils import ID, LogLevel, save_algorithm, BadArgumentError
+from utils import ID, save_algorithm, BadArgumentError
 
 
 class ControlPanel(wx.Panel):
@@ -52,7 +53,7 @@ class ControlPanel(wx.Panel):
             element.SetLabel('Play' if not after.active else 'Pause')
 
         if updated:
-            self.window.WriteToLog(LogLevel.TRACE, 'DebugPanel Layout Updated')
+            self.window.WriteToLog(logging.DEBUG, 'DebugPanel Layout Updated')
             self.Layout()
 
     def InitUI(self):
@@ -68,31 +69,31 @@ class ControlPanel(wx.Panel):
 
     def add_elevator(self, floor):
         self.window.manager.add_elevator(floor)
-        self.window.WriteToLog(LogLevel.INFO, f'Added elevator on floor {floor}')
+        self.window.WriteToLog(logging.INFO, f'Added elevator on floor {floor}')
 
     def remove_elevator(self, elevator_id):
         try:
             elevator_id = int(elevator_id)
         except ValueError:
-            self.window.WriteToLog(LogLevel.ERROR, f'Invalid elevator id {elevator_id}')
+            self.window.WriteToLog(logging.ERROR, f'Invalid elevator id {elevator_id}')
             return
 
         try:
             self.window.manager.remove_elevator(elevator_id)
         except BadArgumentError as e:
-            self.window.WriteToLog(LogLevel.ERROR, str(e))
+            self.window.WriteToLog(logging.ERROR, str(e))
             return
 
-        self.window.WriteToLog(LogLevel.INFO, f'Removed elevator {elevator_id}')
+        self.window.WriteToLog(logging.INFO, f'Removed elevator {elevator_id}')
 
     def add_passenger(self, floor_i, floor_f):
         if floor_i == floor_f:
             self.window.WriteToLog(
-                LogLevel.ERROR,
+                logging.ERROR,
                 f'Passenger on floor {floor_i} to {floor_f} is not valid',
             )
             return
-        self.window.WriteToLog(LogLevel.INFO, f'Add passenger on floor {floor_i} to {floor_f}')
+        self.window.WriteToLog(logging.INFO, f'Add passenger on floor {floor_i} to {floor_f}')
         return self.window.manager.add_passenger(floor_i, floor_f)
 
     def _add_random_passengers(self, count):
@@ -102,25 +103,25 @@ class ControlPanel(wx.Panel):
 
     def set_algorithm(self, algorithm_name):
         if algorithm_name not in self.window.algorithms:
-            self.window.WriteToLog(LogLevel.ERROR, f'Algorithm {algorithm_name} not found')
+            self.window.WriteToLog(logging.ERROR, f'Algorithm {algorithm_name} not found')
             return
 
         self.window.manager.set_algorithm(self.window.algorithms[algorithm_name])
         self.window.current_algorithm = self.window.algorithms[algorithm_name]
-        self.window.WriteToLog(LogLevel.INFO, f'Set algorithm to {algorithm_name}')
+        self.window.WriteToLog(logging.INFO, f'Set algorithm to {algorithm_name}')
 
     def set_speed(self, speed):
         self.window.manager.set_speed(speed)
-        self.window.WriteToLog(LogLevel.INFO, f'Speed set to {speed}')
+        self.window.WriteToLog(logging.INFO, f'Speed set to {speed}')
 
     def set_floors(self, floor_count):
         self.window.manager.set_floors(floor_count)
-        self.window.WriteToLog(LogLevel.INFO, f'Setting floors to: {floor_count}')
+        self.window.WriteToLog(logging.INFO, f'Setting floors to: {floor_count}')
 
     def toggle_play(self):
         self.window.manager.toggle_active()
         new_state = not self.window.manager.algorithm.active
-        self.window.WriteToLog(LogLevel.INFO, f'Setting play state to: {new_state}')
+        self.window.WriteToLog(logging.INFO, f'Setting play state to: {new_state}')
         # self.FindWindowById(ID.BUTTON_CONTROL_PLAY).SetLabel('Play' if not self.window.active else 'Pause')
 
     def import_simulation_fs(self):
@@ -144,17 +145,17 @@ class ControlPanel(wx.Panel):
             self.window._import_simulation(fp)
             _, fn = os.path.split(fp)
 
-            self.window.WriteToLog(LogLevel.INFO, f'Imported {fn}')
+            self.window.WriteToLog(logging.INFO, f'Imported {fn}')
 
         dlg.Destroy()
 
     def export_simulation(self):
         fn = save_algorithm(self.window.manager.algorithm)
-        self.window.WriteToLog(LogLevel.INFO, f'Exported as {fn}')
+        self.window.WriteToLog(logging.INFO, f'Exported as {fn}')
 
     def reset_simulation(self):
         self.window.manager.reset(self.window.current_algorithm)
-        self.window.WriteToLog(LogLevel.INFO, 'Reset')
+        self.window.WriteToLog(logging.INFO, 'Reset')
 
     def LoadControlPanel(self):
         panel = wx.Panel(self.nb, wx.ID_ANY)
@@ -322,7 +323,7 @@ class ControlPanel(wx.Panel):
 
         def set_load_callback(_):
             self.window.manager.set_max_load(load_selection.GetValue() * 60)
-            self.window.WriteToLog(LogLevel.INFO, f'Setting max load to: {load_selection.GetValue()}')
+            self.window.WriteToLog(logging.INFO, f'Setting max load to: {load_selection.GetValue()}')
 
         load_selection.Bind(wx.EVT_SPINCTRL, set_load_callback)
 

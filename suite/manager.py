@@ -2,7 +2,7 @@ import random
 import traceback
 import multiprocessing as mp
 
-from utils import Constants, LogLevel, LogOrigin
+from utils import Constants, LogOrigin
 from utils import TestTimeoutError
 from models import ElevatorManager
 from utils import load_algorithms
@@ -46,7 +46,7 @@ class TestSuiteManager(ElevatorManager):
             n_iter, settings = self.current_simulation
             self.log_message(
                 LogOrigin.TEST,
-                LogLevel.ERROR,
+                logging.ERROR,
                 f'{self.name=} TIMEOUT',
             )
             raise TestTimeoutError(self.name, n_iter, settings)
@@ -142,7 +142,7 @@ def run_loop(args):
         manager.set_active(True)
         manager.log_message(
             LogOrigin.TEST,
-            LogLevel.TRACE,
+            logging.DEBUG,
             f'{manager.name} START SIMULATION',
         )
 
@@ -152,14 +152,14 @@ def run_loop(args):
             # continue with next simulation
             manager.log_message(
                 LogOrigin.TEST,
-                LogLevel.WARNING,
+                logging.WARNING,
                 f'{manager.name} SKIP SIMULATION (TIMEOUT)',
             )
             return ((n_iter, settings), e)
         else:
             manager.log_message(
                 LogOrigin.TEST,
-                LogLevel.TRACE,
+                logging.DEBUG,
                 f'{manager.name} END SIMULATION',
             )
             return ((n_iter, settings), manager.algorithm.stats)
@@ -172,7 +172,7 @@ def run_loop(args):
 
         manager.log_message(
             LogOrigin.TEST,
-            LogLevel.ERROR,
+            logging.ERROR,
             f'{manager.name} ERROR SIMULATION\n\n{e.formatted_exception}',
         )
 

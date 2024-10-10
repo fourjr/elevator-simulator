@@ -1,14 +1,12 @@
 from dataclasses import dataclass
 
-from utils import LogLevel
-
 
 @dataclass
 class LogMessage:
     """A log message object
 
     Attributes:
-        level: LogLevel
+        level: int
             The level of the log message
         message: str
             The message to log
@@ -16,6 +14,6 @@ class LogMessage:
             The tick the message was logged
     """
 
-    level: LogLevel
+    level: int
     message: str
     tick: int

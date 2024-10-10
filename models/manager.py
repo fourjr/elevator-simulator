@@ -1,13 +1,14 @@
 from __future__ import annotations
+import asyncio
 import itertools
+import logging
 import time
 from typing import Callable, List, Tuple
 
 import wx
 
-from utils import _InfinitySentinel, LogLevel
+from utils import _InfinitySentinel
 from models import ElevatorAlgorithm
-from utils.errors import BadArgumentError
 
 
 class ElevatorManager:
@@ -20,7 +21,8 @@ class ElevatorManager:
         algorithm: 'ElevatorAlgorithm',
         *,
         gui: bool = True,
-        log_func: Callable[[LogLevel, str], None] = None,
+        log_func: Callable[[int, str], None] = None,
+        sync: bool = True
     ):
         super().__init__()
         self.parent = parent
@@ -30,6 +32,7 @@ class ElevatorManager:
         self.is_open = True
         self.gui = gui
         self.id = next(ElevatorManager._id_iter)
+        self.sync = sync
 
         if log_func is None:
             self.WriteToLog = self.parent.WriteToLog
@@ -43,7 +46,13 @@ class ElevatorManager:
     def _on_loop(self):
         pass
 
+    @property
     def loop(self):
+        if self.sync:
+            return self._sync_loop
+        return self._asyncio_loop
+
+    async def _asyncio_loop(self):
         while self.running and self.is_open:
             if self.algorithm.active:
                 self.algorithm.loop()
@@ -55,7 +64,30 @@ class ElevatorManager:
                         self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
                 else:
                     self.set_active(False)
-                    self.WriteToLog(LogLevel.INFO, 'Simulation finished, pausing')
+                    self.WriteToLog(logging.INFO, 'Simulation finished, pausing')
+                    self.algorithm.on_simulation_end()
+                    self.on_simulation_end()
+
+                self.send_event()
+
+            if not isinstance(self.speed, _InfinitySentinel):
+                await asyncio.sleep(1 / self.speed)
+
+            # speed: 3 seconds per floor (1x)
+
+    def _sync_loop(self):
+        while self.running and self.is_open:
+            if self.algorithm.active:
+                self.algorithm.loop()
+                self._on_loop()
+
+                if self.algorithm.simulation_running:
+                    # only append if there are things going on
+                    for elevator in self.algorithm.elevators:
+                        self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
+                else:
+                    self.set_active(False)
+                    self.WriteToLog(logging.INFO, 'Simulation finished, pausing')
                     self.algorithm.on_simulation_end()
                     self.on_simulation_end()
 

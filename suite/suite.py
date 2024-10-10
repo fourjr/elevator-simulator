@@ -1,4 +1,5 @@
 import json
+import logging
 import multiprocessing as mp
 import os
 import queue
@@ -9,7 +10,7 @@ from typing import List, Tuple
 
 import colorama
 
-from utils import LogLevel, LogOrigin
+from utils import LogOrigin
 from models import ElevatorAlgorithm
 from suite import BackgroundProcess, TestStats, TestSuiteManager
 from suite.manager import ManagerPool, run_loop
@@ -30,21 +31,21 @@ class TestSuite:
         **include_raw_stats: bool
             Default: True
             Whether to include the raw stats in the output
-        **log_levels: Dict[LogOrigin, List[LogLevel]]
+        **log_levels: Dict[LogOrigin, List[int]]
         """
         self.tests: List['TestSettings'] = tests
         self.mp_manager = mp.Manager()
         self.export_queue: JoinableQueue[Tuple[str, ElevatorAlgorithm]] = self.mp_manager.JoinableQueue()
-        self.log_queue: JoinableQueue[Tuple[LogOrigin, LogLevel, str]] = self.mp_manager.JoinableQueue()
+        self.log_queue: JoinableQueue[Tuple[LogOrigin, int, str]] = self.mp_manager.JoinableQueue()
 
         self.close_event = mp.Event()
         self.export_artefacts = options.pop('export_artefacts', True)
         self.include_raw_stats = options.pop('include_raw_stats', True)
         self.log_levels = {
-            LogOrigin.SIMULATION: LogLevel.WARNING,
-            LogOrigin.TEST: LogLevel.INFO,
-            LogOrigin.ERROR_HANDLER: LogLevel.INFO,
-            LogOrigin.FILE_HANDLER: LogLevel.INFO,
+            LogOrigin.SIMULATION: logging.WARNING,
+            LogOrigin.TEST: logging.INFO,
+            LogOrigin.ERROR_HANDLER: logging.INFO,
+            LogOrigin.FILE_HANDLER: logging.INFO,
         }
 
         if options.get('log_levels'):
@@ -91,7 +92,7 @@ class TestSuite:
             for _ in range(self.max_processes):
                 self.algo_manager_pool.append(TestSuiteManager(self.export_queue, self.log_queue, self.log_levels))
 
-            self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'Starting test suite'))
+            self.log_queue.put((LogOrigin.TEST, logging.INFO, 'Starting test suite'))
             self.background_process.start()
 
             args = []
@@ -117,7 +118,7 @@ class TestSuite:
                         finally:
                             self.check_log(bar)
 
-            self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, 'All tests finished, gathering results'))
+            self.log_queue.put((LogOrigin.TEST, logging.INFO, 'All tests finished, gathering results'))
 
             for (n_iter, settings), stats in res:
                 if isinstance(stats, Exception):
@@ -205,7 +206,7 @@ class TestSuite:
         with open(fn, 'w') as f:
             json.dump(data, f, indent=4)
 
-        self.log_queue.put((LogOrigin.TEST, LogLevel.INFO, f'Saved results to {fn}'))
+        self.log_queue.put((LogOrigin.TEST, logging.INFO, f'Saved results to {fn}'))
 
     def close(self, *, force=False):
         if force:

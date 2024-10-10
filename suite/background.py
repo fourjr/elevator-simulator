@@ -1,8 +1,9 @@
+import logging
 import multiprocessing as mp
 import queue
 from datetime import datetime
 
-from utils import LogLevel, LogOrigin
+from utils import LogOrigin
 from utils import save_algorithm
 
 
@@ -37,7 +38,7 @@ class BackgroundProcess(mp.Process):
                             fn = f'{dt}_{name}.esi'
                             save_algorithm(algo, fn)
                             self.log_queue.put(
-                                (LogOrigin.FILE_HANDLER, LogLevel.TRACE, f'{name} exported to {fn}')
+                                (LogOrigin.FILE_HANDLER, logging.DEBUG, f'{name} exported to {fn}')
                             )
                             self.export_queue.task_done()
 

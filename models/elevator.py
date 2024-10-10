@@ -1,6 +1,7 @@
+import logging
 from typing import List
 
-from utils import ActionType, Constants, Direction, LogLevel, FullElevatorError
+from utils import ActionType, Constants, Direction, FullElevatorError
 from models import ActionQueue, Action
 
 
@@ -60,7 +61,7 @@ class Elevator:
             The number of floors to move the elevator by (-1 or 1)
         """
         self.manager.WriteToLog(
-            LogLevel.TRACE,
+            logging.DEBUG,
             f'Elevator {self.id} moving {increment} floors from {self.current_floor} to {self.current_floor + increment}',
         )
         self._current_floor += increment
@@ -173,7 +174,7 @@ class Elevator:
         ):
             raise FullElevatorError(self.id)
 
-        self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} added to elevator {self.id}')
+        self.manager.WriteToLog(logging.DEBUG, f'Load {load.id} added to elevator {self.id}')
         load.enter_lift_tick = self.manager.algorithm.tick_count
         wait_time = self.manager.algorithm.tick_count - load.tick_created
         self.manager.algorithm.wait_times.append(wait_time)
@@ -188,7 +189,7 @@ class Elevator:
         load: Load
             A load to remove from the elevator
         """
-        self.manager.WriteToLog(LogLevel.TRACE, f'Load {load.id} unloaded from elevator {self.id}')
+        self.manager.WriteToLog(logging.DEBUG, f'Load {load.id} unloaded from elevator {self.id}')
         self.manager.algorithm.time_in_lift.append(self.manager.algorithm.tick_count - load.enter_lift_tick + 1)
 
         load.elevator = None

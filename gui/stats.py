@@ -1,10 +1,11 @@
 from collections import Counter, defaultdict
+import logging
 
 import wx
 import wx.lib.scrolledpanel as scrolled
 import wx.aui as aui
 
-from utils import Unicode, LogLevel
+from utils import Unicode
 from models import Elevator
 
 
@@ -73,7 +74,7 @@ class StatsPanel(scrolled.ScrolledPanel):
                 self.floor_tc.SetValue(floor_fmt)
 
         if updated:
-            self.window.WriteToLog(LogLevel.TRACE, 'StatsPanel Layout Updated')
+            self.window.WriteToLog(logging.DEBUG, 'StatsPanel Layout Updated')
             self.Layout()
             self.SetupScrolling()
 
