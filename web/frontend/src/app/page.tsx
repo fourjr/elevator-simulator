@@ -12,6 +12,7 @@ import { ClientPacket, ServerPacket } from '@/models/Packet';
 import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket, OpCode } from '@/models/enums';
 import Elevator from '@/models/Elevator';
 import WSEvent from '@/models/WSEvent';
+import Load from '@/models/Load';
 
 
 export default function Home() {
@@ -21,6 +22,8 @@ export default function Home() {
     const [simulationSpeed, setSimulationSpeed] = useState<number>(3);
     const [updateSpeed, setUpdateSpeed] = useState<number>(1);
     const [gameState, setGameState] = useState<GameState>(GameState.PAUSED);
+    const [loads, setLoads] = useState<Load[]>([]);
+    const [currentTick, setCurrentTick] = useState<number>(0);
 
     const [elevators, setElevators] = useState<Elevator[]>([]);
     const elevatorIds = elevators.map(e => e.id);
@@ -50,6 +53,8 @@ export default function Home() {
                     setUpdateSpeed(packet.numData[RegisterPacket.updateSpeed] / 100);
                     setGameState(GameState.PAUSED);
                     setElevators([]);
+                    setLoads([]);
+                    setCurrentTick(0);
                 }
 
                 if (packet.command === OpCode.ADD_ELEVATOR) {
@@ -85,6 +90,17 @@ export default function Home() {
                     setMaxLoad(packet.numData[0]);
                 }
 
+                if (packet.command === OpCode.ADD_PASSENGERS) {
+                    const count = packet.numData[0];
+                    const newLoads = [];
+                    for (let i = 0; i < count; i++) {
+                        const floor_i = packet.numData[i * 2 + 1];
+                        const floor_f = packet.numData[i * 2 + 2];
+                        newLoads.push(new Load(floor_i, floor_f, currentTick));
+                    }
+                    setLoads([...loads, ...newLoads]);
+                }
+
                 if (packet.command === OpCode.START_SIMULATION) {
                     setGameState(GameState.RUNNING);
                 }
@@ -112,6 +128,9 @@ export default function Home() {
                 }}>
                     <Grid xs={8} sx={{
                         height: "67%",
+                        maxHeight: "67vh",
+                        overflow: "auto",
+                        width: "100%"
                     }}>
                         <ElevatorPanel elevators={elevators} />
                     </Grid>
@@ -122,19 +141,22 @@ export default function Home() {
                         <ControlPanel wsInstance={wsInstance} elevatorIds={elevatorIds} floors={floors} maxLoad={maxLoad} algorithm={algorithm} simulationSpeed={simulationSpeed} updateSpeed={updateSpeed} gameState={gameState}/>
                     </Grid>
                 </Grid>
-                <Grid xs={12} sm={2}>
-                    <ElevatorStatusPanel floors={floors} />
+                <Grid xs={12} sm={2} sx={{
+                    maxHeight: "90vh",
+                    overflow: "auto"
+                }}>
+                    <ElevatorStatusPanel floors={floors} loads={loads}/>
                 </Grid>
                 <Grid xs={12} sm={4}>
                     <Grid xs={8} sx={{
                         height: "40%",
                     }}>
-                        <StatsPanel wsInstance={wsInstance} />
+                        <StatsPanel/>
                     </Grid>
                     <Grid xs={4} sx={{
                         height: "60%",
                     }}>
-                        <LogPanel wsInstance={wsInstance} />
+                        <LogPanel/>
                     </Grid>
                 </Grid>
             </Grid>

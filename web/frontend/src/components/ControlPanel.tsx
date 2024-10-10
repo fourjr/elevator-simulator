@@ -147,12 +147,16 @@ export default function ControlPanel(
                 <Typography m={1} display="inline">Elevator</Typography>
                 <FloorsInputField value={newElevatorFloor} setValue={setNewElevatorFloor} />
                 <Button onClick={addElevator}>Add</Button>
-                <Select id="remove-elevator-id" variant="standard" value={removeElevatorId.toString()} onChange={(event: SelectChangeEvent) => {
-                    setRemoveElevatorId(parseInt(event.target.value));
-                }}>
-                    {elevatorIds.map(id => <MenuItem key={id} value={id.toString()}>{id}</MenuItem>)}
-                </Select>
-                <Button onClick={removeElevator}>Remove</Button>
+                {elevatorIds.length > 0 && 
+                <Box display="inline" mx={1}>
+                    <Select id="remove-elevator-id" variant="standard" value={removeElevatorId.toString()} onChange={(event: SelectChangeEvent) => {
+                        setRemoveElevatorId(parseInt(event.target.value));
+                    }}>
+                        {elevatorIds.map(id => <MenuItem key={id} value={id.toString()}>{id}</MenuItem>)}
+                    </Select>
+                    <Button onClick={removeElevator}>Remove</Button>
+                </Box>
+                }
             </Box>
             <Box m={1}>
                 <Typography m={1} display="inline">PAX</Typography>

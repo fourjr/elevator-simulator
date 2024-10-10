@@ -235,6 +235,13 @@ class ElevatorAlgorithm:
         destination: int
             The floor the passenger wants to go to
         """
+        if initial == destination:
+            raise BadArgumentError('Initial and destination floors cannot be the same')
+        if initial < 0 or destination < 0:
+            raise BadArgumentError('Floors cannot be negative')
+        if initial > self.floors or destination > self.floors:
+            raise BadArgumentError('Floors cannot be greater than the number of floors')
+
         load = Load(initial, destination, 60)
         load.tick_created = self.tick_count
         self.add_load(load)

@@ -140,7 +140,6 @@ class ClientPacket:
                 passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
                 manager.add_passengers(passengers)
 
-                # flatten passengers
                 await self.ack()
 
             case OpCode.SET_ALGORITHM:

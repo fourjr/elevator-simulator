@@ -7,6 +7,7 @@ import wx
 
 from utils import _InfinitySentinel, LogLevel
 from models import ElevatorAlgorithm
+from utils.errors import BadArgumentError
 
 
 class ElevatorManager:
