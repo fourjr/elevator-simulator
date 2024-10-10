@@ -53,27 +53,29 @@ class ElevatorManager:
         return self._asyncio_loop
 
     async def _asyncio_loop(self):
-        while self.running and self.is_open:
-            if self.algorithm.active:
-                self.algorithm.loop()
-                self._on_loop()
+        try:
+            while self.running and self.is_open:
+                if self.algorithm.active:
+                    self.algorithm.loop()
+                    self._on_loop()
 
-                if self.algorithm.simulation_running:
-                    # only append if there are things going on
-                    for elevator in self.algorithm.elevators:
-                        self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
-                else:
-                    self.set_active(False)
-                    self.WriteToLog(logging.INFO, 'Simulation finished, pausing')
-                    self.algorithm.on_simulation_end()
-                    self.on_simulation_end()
+                    if self.algorithm.simulation_running:
+                        # only append if there are things going on
+                        for elevator in self.algorithm.elevators:
+                            self.algorithm.occupancy.append((elevator.load / self.algorithm.max_load) * 100)
+                    else:
+                        self.set_active(False)
+                        self.WriteToLog(logging.INFO, 'Simulation finished, pausing')
+                        self.algorithm.on_simulation_end()
+                        self.on_simulation_end()
 
-                self.send_event()
+                    self.send_event()
 
-            if not isinstance(self.speed, _InfinitySentinel):
-                await asyncio.sleep(1 / self.speed)
-
-            # speed: 3 seconds per floor (1x)
+                if not isinstance(self.speed, _InfinitySentinel):
+                    await asyncio.sleep(1 / self.speed)
+                    # speed: 3 seconds per floor (1x)
+        except asyncio.CancelledError:
+            pass
 
     def _sync_loop(self):
         while self.running and self.is_open:
@@ -95,8 +97,7 @@ class ElevatorManager:
 
             if not isinstance(self.speed, _InfinitySentinel):
                 time.sleep(1 / self.speed)
-
-            # speed: 3 seconds per floor (1x)
+                # speed: 3 seconds per floor (1x)
 
     def send_event(self):
         if self.gui is True:

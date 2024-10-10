@@ -171,7 +171,7 @@ class ClientPacket:
                 await self.ack()
 
             case OpCode.START_SIMULATION:
-                manager.start_simulation()
+                manager.play()
                 await self.ack()
 
     async def ack(self, *additional_data: int | bytes | str) -> None:

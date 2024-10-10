@@ -20,7 +20,7 @@ export default function ControlPanel(
     const [removeElevatorId, setRemoveElevatorId] = useState(1);
     const [addPassengerStartFloor, setAddPassengerStartFloor] = useState(1);
     const [addPassengerEndFloor, setAddPassengerEndFloor] = useState(2);
-    const [addRandomPassengerCount, setAddRandomPassengerCount] = useState<number | null>(1);
+    const [addRandomPassengerCount, setAddRandomPassengerCount] = useState<number | null>(50);
 
     const [floorInput, setFloorInput] = useState<number | null>(floorCount);
     const [maxLoadInput, setMaxLoadInput] = useState<number | null>(maxLoad);

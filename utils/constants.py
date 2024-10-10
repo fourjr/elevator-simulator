@@ -28,6 +28,7 @@ class LogOrigin(Enum):
     TEST = 2
     FILE_HANDLER = 3
     ERROR_HANDLER = 4
+    WEB = 5
 
 
 class ActionType(Enum):

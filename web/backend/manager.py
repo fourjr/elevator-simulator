@@ -1,9 +1,13 @@
 import asyncio
+import logging
 from typing import List
 
 from models import ElevatorManager, load_algorithms
-from utils import Constants, LogOrigin, TestTimeoutError, NoManagerError
+from utils import Constants, NoManagerError
 from web.backend.connection import WSConnection
+
+
+logger = logging.getLogger('__main__.' + __name__)
 
 
 class AsyncWebManager(ElevatorManager):
@@ -14,14 +18,27 @@ class AsyncWebManager(ElevatorManager):
             None,
             self.algorithms[Constants.DEFAULT_ALGORITHM],
             gui=False,
-            log_func=self.log_message_simulation,
+            log_func=self.log_message_web,
+            sync=False
         )
-        self._running = False
-        self.server = None
         self.ws_connection: WSConnection = None
 
+        self._running = False
         self.latest_load_move = 0
         self.previous_loads = []
+        self._loop_task = None
+
+    async def set_running(self, value):
+        self._running = value
+        if value:
+            self._loop_task = asyncio.create_task(self.loop())
+        else:
+            try:
+                await asyncio.wait_for(self._loop_task, timeout=0.5)  # try to gracefully end the loop
+            except asyncio.TimeoutError:
+                self._loop_task.cancel()
+
+            self._loop_task = None
 
     @property
     def running(self):
@@ -31,46 +48,13 @@ class AsyncWebManager(ElevatorManager):
     def name(self):
         return None
 
-    def _on_loop(self):
-        # frozen loads
-        if self.algorithm.tick_count - self.latest_load_move > 500:
-            self.end_test_simulation()
-            n_iter, settings = self.current_simulation
-            self.log_message(
-                LogOrigin.TEST,
-                logging.ERROR,
-                f'{self.name=} TIMEOUT',
-            )
-            raise TestTimeoutError(self.name, n_iter, settings)
+    def log_message_web(self, level, message):
+        logger.log(level, message)
 
-    def on_load_move(self, _):
-        self.latest_load_move = self.algorithm.tick_count
-
-    def start_simulation(self):
-        self.log_message(
-            LogOrigin.TEST,
-            logging.ERROR,
-            f'{self.name=} START',
-        )
-        self._running = True
-        asyncio_loop = asyncio.get_event_loop()
-        asyncio_loop.run_in_executor(None, self.loop)
-        # thread = threading.Thread(target=self.loop)
-        # thread.start()
-
-    def on_simulation_end(self):
-        self.end_test_simulation()
-
-    def end_test_simulation(self):
-        self._running = False
-
-    def log_message_simulation(self, level, message):
-        self.log_message(LogOrigin.SIMULATION, level, message)
-
-    def log_message(self, origin, level, message):
-        fmt = f'[{origin.name}] [{level.name[0]}] {message}'
-        print(fmt)
-        # TODO
+    def close(self):
+        if self._loop_task is not None:
+            self._loop_task.cancel()
+        return super().close()
 
 
 class AsyncioManagerPool:
@@ -101,6 +85,7 @@ class AsyncioManagerPool:
             else:
                 take = m[0]
             self.taken_managers.add(take.id)
+            await take.set_running(True)
             return take
 
     async def release(self, manager: AsyncWebManager) -> None:
@@ -110,6 +95,8 @@ class AsyncioManagerPool:
             if len(self.managers) > self.min_managers:
                 manager.close()
                 self.managers.remove(manager)
+            else:
+                await manager.set_running(False)
 
     def close(self) -> None:
         """Closes all managers"""
