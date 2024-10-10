@@ -13,22 +13,17 @@ interface FloorInfo {
 }
 
 export default function ElevatorStatusPanel({floors, loads}: {floors: number, loads: Load[]}) {
-
-    useEffect(() => {
-        document.addEventListener('wsMessage', (event) => {
-            const message = (event as WSEvent).packet;
-        })
-    }, [])
-
     const passengersInFloors: FloorInfo[] = [];
     for (let i = 0; i < floors; i++) {
         passengersInFloors.push({goingUp: 0, goingDown: 0})
     }
     for (const load of loads) {
-        if (load.initialFloor < load.destinationFloor) {
-            passengersInFloors[load.initialFloor - 1].goingUp++
-        } else {
-            passengersInFloors[load.initialFloor - 1].goingDown++
+        if (load.elevator === null) {
+            if (load.initialFloor < load.destinationFloor) {
+                passengersInFloors[load.initialFloor - 1].goingUp++
+            } else {
+                passengersInFloors[load.initialFloor - 1].goingDown++
+            }
         }
     }
 

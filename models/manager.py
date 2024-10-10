@@ -9,6 +9,7 @@ import wx
 
 from utils import _InfinitySentinel
 from models import ElevatorAlgorithm
+from utils._utils import run_async_or_sync
 
 
 class ElevatorManager:
@@ -43,7 +44,10 @@ class ElevatorManager:
     def running(self):
         raise NotImplementedError
 
-    def _on_loop(self):
+    def on_loop_tick(self):
+        pass
+
+    def on_loop_tick_end(self):
         pass
 
     @property
@@ -57,7 +61,7 @@ class ElevatorManager:
             while self.running and self.is_open:
                 if self.algorithm.active:
                     self.algorithm.loop()
-                    self._on_loop()
+                    await run_async_or_sync(self.on_loop_tick)
 
                     if self.algorithm.simulation_running:
                         # only append if there are things going on
@@ -69,6 +73,7 @@ class ElevatorManager:
                         self.algorithm.on_simulation_end()
                         self.on_simulation_end()
 
+                    await run_async_or_sync(self.on_loop_tick_end)
                     self.send_event()
 
                 if not isinstance(self.speed, _InfinitySentinel):
@@ -81,7 +86,7 @@ class ElevatorManager:
         while self.running and self.is_open:
             if self.algorithm.active:
                 self.algorithm.loop()
-                self._on_loop()
+                self.on_loop_tick()
 
                 if self.algorithm.simulation_running:
                     # only append if there are things going on
@@ -100,6 +105,7 @@ class ElevatorManager:
                 # speed: 3 seconds per floor (1x)
 
     def send_event(self):
+        """Sends an event to the server"""
         if self.gui is True:
             event = self.event(algorithm=self.algorithm, thread=self)
             wx.PostEvent(self.parent, event)
@@ -124,13 +130,16 @@ class ElevatorManager:
         self.is_open = False
 
     def add_passenger(self, initial: int, destination: int):
-        self.algorithm.add_passenger(initial, destination)
+        load = self.algorithm.add_passenger(initial, destination)
         self.send_event()
+        return load
 
     def add_passengers(self, passengers: List[Tuple[int, int]]):
+        loads = []
         for initial, destination in passengers:
-            self.algorithm.add_passenger(initial, destination)
+            loads.append(self.algorithm.add_passenger(initial, destination))
         self.send_event()
+        return loads
 
     def set_algorithm(self, cls: 'ElevatorAlgorithm'):
         self.algorithm = cls(
@@ -165,6 +174,18 @@ class ElevatorManager:
         self.send_event()
 
     def on_load_move(self, load: 'Load'):
+        pass
+
+    def on_elevator_move(self, elevator: 'Elevator'):
+        pass
+
+    def on_elevator_destination_change(self, elevator: 'Elevator', destination: int):
+        pass
+
+    def on_load_unload(self, load: 'Load', elevator: 'Elevator'):
+        pass
+
+    def on_load_load(self, load: 'Load', elevator: 'Elevator'):
         pass
 
     def on_simulation_end(self):

@@ -5,6 +5,8 @@ from typing import List
 from models import ElevatorManager, load_algorithms
 from utils import Constants, NoManagerError
 from web.backend.connection import WSConnection
+from web.backend.constants import GameStateUpdate, GameUpdateType, OpCode
+from web.backend.packet import ServerPacket
 
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -26,6 +28,7 @@ class AsyncWebManager(ElevatorManager):
         self._running = False
         self.latest_load_move = 0
         self.previous_loads = []
+        self.diff_events = []
         self._loop_task = None
 
     async def set_running(self, value):
@@ -39,6 +42,28 @@ class AsyncWebManager(ElevatorManager):
                 self._loop_task.cancel()
 
             self._loop_task = None
+
+    def on_elevator_move(self, elevator: 'Elevator'):
+        self.diff_events.append(GameStateUpdate(GameUpdateType.ELEVATOR_MOVE, elevator.id, elevator.current_floor))
+
+    def on_elevator_destination_change(self, elevator: 'Elevator', destination: int):
+        if destination is None:
+            return
+        self.diff_events.append(GameStateUpdate(GameUpdateType.ELEVATOR_DESTINATION, elevator.id, destination))
+
+    def on_load_unload(self, load: 'Load', elevator: 'Elevator'):
+        self.diff_events.append(GameStateUpdate(GameUpdateType.LOAD_UNLOAD, elevator.id, load.id))
+
+    def on_load_load(self, load: 'Load', elevator: 'Elevator'):
+        self.diff_events.append(GameStateUpdate(GameUpdateType.LOAD_LOAD, elevator.id, load.id))
+
+    async def on_loop_tick_end(self):
+        if self.ws_connection is not None:
+            flattened_data = [self.algorithm.tick_count, len(self.diff_events)] + [x for event in self.diff_events for x in event.flatten()]
+            await ServerPacket(OpCode.GAME_UPDATE_STATE, flattened_data).send(self.ws_connection.protocol)
+            self.diff_events = []
+        else:
+            raise ValueError('No connection to send events to')
 
     @property
     def running(self):

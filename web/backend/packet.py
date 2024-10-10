@@ -138,9 +138,14 @@ class ClientPacket:
             case OpCode.ADD_PASSENGERS:
                 count = self._read_int()
                 passengers = [(self._read_int(), self._read_int()) for _ in range(count)]
-                manager.add_passengers(passengers)
+                loads = manager.add_passengers(passengers)
 
-                await self.ack()
+                data = [len(passengers)]
+                for load in loads:
+                    data.append(load.id)
+                    data.append(load.initial_floor)
+                    data.append(load.destination_floor)
+                await self.ack(*data, original_data=False)
 
             case OpCode.SET_ALGORITHM:
                 algorithm_id = self._read_int()
@@ -174,14 +179,21 @@ class ClientPacket:
                 manager.play()
                 await self.ack()
 
-    async def ack(self, *additional_data: int | bytes | str) -> None:
+    async def ack(self, *additional_data: int | bytes | str, **options) -> None:
         """Replies to the client with a server packet
         and the given data
 
         additional_data: int*
             Additional data to send at the front of the ACK packet
+
+        **original_data: bool
+            Whether to send the original packet data
         """
-        new_data = additional_data + self.data
+        original_data = options.get('original_data', True)
+        if original_data:
+            new_data = additional_data + self.data
+        else:
+            new_data = additional_data
         await ServerPacket(self.command, new_data).send(self.connection.protocol)
 
     async def error(self, error_code) -> None:

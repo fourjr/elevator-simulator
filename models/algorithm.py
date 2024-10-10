@@ -245,6 +245,7 @@ class ElevatorAlgorithm:
         load = Load(initial, destination, 60)
         load.tick_created = self.tick_count
         self.add_load(load)
+        return load
 
     def loop(self):
         """Runs a cycle of the elevator algorithm"""

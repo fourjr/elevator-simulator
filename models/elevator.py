@@ -14,7 +14,8 @@ class Elevator:
         self.enabled: bool = True
         self.action_manager = ActionQueue()
 
-        self._destination: int = self.manager.algorithm.get_new_destination(self)
+        self._destination: int = None
+        self.destination = self.manager.algorithm.get_new_destination(self)
 
     def copy(self):
         """Creates a copy of the elevator"""
@@ -28,9 +29,14 @@ class Elevator:
     @property
     def destination(self):
         if self._destination is None:
-            self._destination = self.manager.algorithm.get_new_destination(self)
+            self.destination = self.manager.algorithm.get_new_destination(self)
 
         return self._destination
+
+    @destination.setter
+    def destination(self, value):
+        self.manager.on_elevator_destination_change(self, value)
+        self._destination = value
 
     @property
     def direction(self):
@@ -105,7 +111,9 @@ class Elevator:
                 self.manager.on_load_move(load)
 
         if self._destination == self.current_floor or self._destination is None:
-            self._destination = self.manager.algorithm.get_new_destination(self)
+            self.destination = self.manager.algorithm.get_new_destination(self)
+
+        self.manager.on_elevator_move(self)
 
     def cycle(self):
         """Runs a cycle of the elevator"""
@@ -181,6 +189,7 @@ class Elevator:
 
         load.elevator = self
         self.loads.append(load)
+        self.manager.on_load_load(load, self)
         self.manager.algorithm.on_load_load(load, self)
 
     def unload_load(self, load):
@@ -194,6 +203,7 @@ class Elevator:
 
         load.elevator = None
         self.loads.remove(load)
+        self.manager.on_load_unload(load, self)
         self.manager.algorithm.on_load_unload(load, self)
         self.manager.algorithm.remove_load(load)
 

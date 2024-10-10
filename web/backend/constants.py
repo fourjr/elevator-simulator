@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 from enum import IntEnum
+from typing import Tuple
 
 
 class PacketConstants:
@@ -28,16 +30,21 @@ class OpCode(IntEnum):
     DASHBOARD = 20
 
 
-class GameUpdate(IntEnum):
-    MOVE_LOAD = 8
-    SET_ALGORITHM = 6
-    SET_MAX_LOAD = 7
+class GameUpdateType(IntEnum):
+    ELEVATOR_MOVE = 0
+    ELEVATOR_DESTINATION = 1
+    LOAD_UNLOAD = 2
+    LOAD_LOAD = 3
 
 
-class LogUpdate(IntEnum):
-    INFO = 0
-    WARNING = 1
-    ERROR = 2
+@dataclass
+class GameStateUpdate:
+    update_type: GameUpdateType
+    elevator_id: int
+    parameter: int
+
+    def flatten(self) -> Tuple[int]:
+        return (int(self.update_type), self.elevator_id, self.parameter)
 
 
 class Algorithms(IntEnum):

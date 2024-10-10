@@ -31,6 +31,13 @@ enum OpCode {
     DASHBOARD = 20,
 }
 
+enum GameUpdateType {
+    ELEVATOR_MOVE = 0,
+    ELEVATOR_DESTINATION = 1,
+    LOAD_UNLOAD = 2,
+    LOAD_LOAD = 3
+}
+
 enum GameState {
     RUNNING = 0,
     PAUSED = 1,
@@ -52,4 +59,4 @@ enum ElevatorPacket {
     currentFloor = 1,
 }
 
-export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, OpCode };
+export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, GameUpdateType, OpCode };

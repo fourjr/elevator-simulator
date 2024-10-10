@@ -9,7 +9,7 @@ import StatsPanel from '@/components/StatsPanel';
 import LogPanel from '@/components/LogPanel';
 
 import { ClientPacket, ServerPacket } from '@/models/Packet';
-import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket, OpCode } from '@/models/enums';
+import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket, OpCode, GameUpdateType } from '@/models/enums';
 import Elevator from '@/models/Elevator';
 import WSEvent from '@/models/WSEvent';
 import Load from '@/models/Load';
@@ -91,12 +91,13 @@ export default function Home() {
                 }
 
                 if (packet.command === OpCode.ADD_PASSENGERS) {
-                    const count = packet.numData[0];
+                    const count = packet.readInt();
                     const newLoads = [];
                     for (let i = 0; i < count; i++) {
-                        const floor_i = packet.numData[i * 2 + 1];
-                        const floor_f = packet.numData[i * 2 + 2];
-                        newLoads.push(new Load(floor_i, floor_f, currentTick));
+                        const id = packet.readInt();
+                        const floor_i = packet.readInt();
+                        const floor_f = packet.readInt();
+                        newLoads.push(new Load(id, floor_i, floor_f, currentTick));
                     }
                     setLoads([...loads, ...newLoads]);
                 }
@@ -111,6 +112,51 @@ export default function Home() {
 
                 if (packet.command === OpCode.DASHBOARD) {
                     console.log(packet.readString())
+                }
+
+                if (packet.command === OpCode.GAME_UPDATE_STATE) {
+                    setCurrentTick(packet.readInt());
+
+                    const numEvents = packet.readInt();
+
+                    for (let i = 0; i < numEvents; i++) {
+                        const updateType = packet.readInt() as GameUpdateType;
+                        const elevatorId = packet.readInt();
+                        const parameter = packet.readInt();
+
+                        if (updateType === GameUpdateType.ELEVATOR_MOVE) {
+                            const elevator = elevators.find(e => e.id === elevatorId)
+                            if (elevator) {
+                                elevator.currentFloor = parameter;
+                            }
+                        }
+                        else if (updateType === GameUpdateType.ELEVATOR_DESTINATION) {
+                            const elevator = elevators.find(e => e.id === elevatorId)
+                            if (elevator) {
+                                elevator.destinationFloor = parameter;
+                            }
+                        }
+                        else if (updateType === GameUpdateType.LOAD_LOAD) {
+                            const load = loads.find(l => l.id === parameter)
+                            if (load) {
+                                const elevator = elevators.find(e => e.id === elevatorId)
+                                if (elevator) {
+                                    load.elevator = elevator;
+                                    elevator.loads.push(load);
+                                }
+                            }
+                        }
+                        else if (updateType === GameUpdateType.LOAD_UNLOAD) {
+                            const load = loads.find(l => l.id === parameter)
+                            if (load) {
+                                const elevator = elevators.find(e => e.id === elevatorId)
+                                if (elevator) {
+                                    elevator.loads = elevator.loads.filter(l => l.id !== parameter);
+                                    setLoads(loads.filter(l => l.id !== parameter));
+                                }
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -151,7 +197,7 @@ export default function Home() {
                     <Grid xs={8} sx={{
                         height: "40%",
                     }}>
-                        <StatsPanel/>
+                        <StatsPanel currentTick={currentTick}/>
                     </Grid>
                     <Grid xs={4} sx={{
                         height: "60%",

@@ -1,3 +1,4 @@
+import asyncio
 import gzip
 import logging
 import os
@@ -87,3 +88,10 @@ def get_log_level(name) -> str:
 def get_log_name(level) -> str:
     """Returns the name from the level int"""
     return {v: k for k, v in log_levels().items()}[level]
+
+
+async def run_async_or_sync(func):
+    """Runs a function whether it is async or sync"""
+    if asyncio.iscoroutinefunction(func):
+        return await func()
+    return func()

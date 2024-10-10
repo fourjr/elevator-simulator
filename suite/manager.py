@@ -40,7 +40,7 @@ class TestSuiteManager(ElevatorManager):
         else:
             return None
 
-    def _on_loop(self):
+    def on_loop_tick(self):
         # frozen loads
         if self.algorithm.tick_count - self.latest_load_move > 500:
             self.end_test_simulation()
