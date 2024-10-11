@@ -5,7 +5,7 @@ from typing import List
 from models import ElevatorManager, load_algorithms
 from utils import Constants, NoManagerError
 from web.backend.connection import WSConnection
-from web.backend.constants import CloseReason, GameStateUpdate, GameUpdateType, OpCode
+from web.backend.constants import GameStateUpdate, GameUpdateType, OpCode
 from web.backend.packet import ServerPacket
 
 
@@ -26,7 +26,6 @@ class AsyncWebManager(ElevatorManager):
         self.ws_connection: WSConnection = None
 
         self._running = False
-        self.latest_load_move = 0
         self.previous_loads = []
         self.diff_events = []
         self._loop_task = None
@@ -47,7 +46,7 @@ class AsyncWebManager(ElevatorManager):
     async def on_async_loop_exception(self, e: Exception):
         self._loop_task = None
         logger.error('Error in loop', exc_info=e)
-        await ServerPacket(OpCode.CLOSE, [CloseReason.UNEXPECTED]).send(self.ws_connection.protocol)
+        await ServerPacket(OpCode.CLOSE, ["Internal error"]).send(self.ws_connection.protocol)
         await self.ws_connection.close()
 
     def on_elevator_move(self, elevator: 'Elevator'):
@@ -64,13 +63,25 @@ class AsyncWebManager(ElevatorManager):
     def on_load_load(self, load: 'Load', elevator: 'Elevator'):
         self.diff_events.append(GameStateUpdate(GameUpdateType.LOAD_LOAD, elevator.id, load.id))
 
-    async def on_loop_tick_end(self):
+    async def _on_loop(self):
+        await self.send_diff_events()
+
+    async def send_diff_events(self, *, force=False):
         if self.ws_connection is not None:
-            flattened_data = [self.algorithm.tick_count, len(self.diff_events)] + [x for event in self.diff_events for x in event.flatten()]
-            await ServerPacket(OpCode.GAME_UPDATE_STATE, flattened_data).send(self.ws_connection.protocol)
-            self.diff_events = []
+            if force or self.algorithm.tick_count % self.ws_connection.update_rate == 0:
+                flattened_data = [self.algorithm.tick_count, len(self.diff_events)] + [x for event in self.diff_events for x in event.flatten()]
+                await ServerPacket(OpCode.GAME_UPDATE_STATE, flattened_data).send(self.ws_connection.protocol)
+                self.diff_events = []
         else:
             raise ValueError('No connection to send events to')
+
+    async def pause(self):
+        await self.send_diff_events(force=True)
+        return super().pause()
+
+    async def on_simulation_end(self):
+        await self.send_diff_events(force=True)
+        await ServerPacket(OpCode.STOP_SIMULATION).send(self.ws_connection.protocol)
 
     @property
     def running(self):

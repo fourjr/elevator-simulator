@@ -48,8 +48,13 @@ class ClientPacket {
     }
 
     send(ws: WebSocket): void {
-        ws.send(this.toArrayBuffer());
-        console.log(`Message sent to server: ${OpCode[this.command]}`)
+        if (ws.readyState === ws.OPEN) {
+            ws.send(this.toArrayBuffer());
+            console.log(`Message sent to server: ${OpCode[this.command]}`)
+        }
+        else {
+            ws.dispatchEvent(new Event('error'));
+        }
     }
 }
 

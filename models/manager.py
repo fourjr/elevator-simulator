@@ -44,10 +44,7 @@ class ElevatorManager:
     def running(self):
         raise NotImplementedError
 
-    def on_loop_tick(self):
-        pass
-
-    def on_loop_tick_end(self):
+    def _on_loop(self):
         pass
 
     async def on_async_loop_exception(self, e: Exception):
@@ -64,7 +61,7 @@ class ElevatorManager:
             while self.running and self.is_open:
                 if self.algorithm.active:
                     self.algorithm.loop()
-                    await run_async_or_sync(self.on_loop_tick)
+                    await run_async_or_sync(self._on_loop)
 
                     if self.algorithm.simulation_running:
                         # only append if there are things going on
@@ -73,10 +70,8 @@ class ElevatorManager:
                     else:
                         self.set_active(False)
                         self.WriteToLog(logging.INFO, 'Simulation finished, pausing')
-                        self.algorithm.on_simulation_end()
-                        self.on_simulation_end()
+                        await run_async_or_sync(self.on_simulation_end)
 
-                    await run_async_or_sync(self.on_loop_tick_end)
                     self.send_event()
 
                 if not isinstance(self.speed, _InfinitySentinel):
@@ -91,7 +86,7 @@ class ElevatorManager:
         while self.running and self.is_open:
             if self.algorithm.active:
                 self.algorithm.loop()
-                self.on_loop_tick()
+                self._on_loop()
 
                 if self.algorithm.simulation_running:
                     # only append if there are things going on

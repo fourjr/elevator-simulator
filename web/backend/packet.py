@@ -130,9 +130,9 @@ class ClientPacket:
                 manager.set_speed(speed)
                 await self.ack()
 
-            case OpCode.SET_UPDATE_SPEED:
-                speed = self._read_int() / 100
-                self.connection.update_speed = speed  # TODO
+            case OpCode.SET_UPDATE_RATE:
+                speed = self._read_int()
+                self.connection.update_rate = speed  # TODO
                 await self.ack()
 
             case OpCode.ADD_PASSENGERS:
@@ -162,17 +162,17 @@ class ClientPacket:
 
             case OpCode.NEW_SIMULATION:
                 manager.reset()
-                # floors, max_load, algorithm_id, simulation_speed, update_speed
+                # floors, max_load, algorithm_id, simulation_speed, update_rate
                 await self.ack(
                     manager.algorithm.floors,
                     manager.algorithm.max_load,
                     algo_to_enum(manager.algorithm.__class__),
                     int(manager.speed * 100),
-                    int(self.connection.update_speed * 100)
+                    self.connection.update_rate
                 )
 
             case OpCode.STOP_SIMULATION:
-                manager.pause()
+                await manager.pause(user_input=True)
                 await self.ack()
 
             case OpCode.START_SIMULATION:
@@ -196,9 +196,9 @@ class ClientPacket:
             new_data = additional_data
         await ServerPacket(self.command, new_data).send(self.connection.protocol)
 
-    async def error(self, error_code) -> None:
+    async def error(self, error_message) -> None:
         """Sends an ERROR packet to the client"""
-        await ServerPacket(OpCode.ERROR, [error_code]).send(self.connection.protocol)
+        await ServerPacket(OpCode.ERROR, [error_message]).send(self.connection.protocol)
 
     def __str__(self) -> str:
         """Returns a string representation of the packet"""

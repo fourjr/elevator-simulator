@@ -23,7 +23,7 @@ enum OpCode {
     SET_FLOORS = 8,
     SET_ALGORITHM = 9,
     SET_SIMULATION_SPEED = 10,
-    SET_UPDATE_SPEED = 11,
+    SET_UPDATE_RATE = 11,
     SET_MAX_LOAD = 12,
 
     GAME_UPDATE_STATE = 13,
@@ -51,7 +51,7 @@ enum RegisterPacket {
     maxLoad = 1,
     algorithm = 2,
     simulationSpeed = 3,
-    updateSpeed = 4
+    updateRate = 4
 }
 
 enum ElevatorPacket {

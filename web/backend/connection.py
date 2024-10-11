@@ -4,7 +4,7 @@ import logging
 
 import websockets
 
-from utils.errors import IncompletePacketError, InvalidStartBytesError, NoManagerError
+from utils.errors import ElevatorError, IncompletePacketError, InvalidStartBytesError, NoManagerError
 from web.backend.constants import CloseReason, ErrorCode, OpCode
 from web.backend.packet import ClientPacket, ServerPacket
 
@@ -19,7 +19,7 @@ class WSConnection:
         self.current_message = b''
         self.client_id = None
         self.manager = None
-        self.update_speed = 1
+        self.update_rate = 1
         self._is_closing = False
 
     @property
@@ -55,7 +55,7 @@ class WSConnection:
                     # No manager, try again later. Server at max capacity.
                     logger.warning(f'No managers available for {self.address}')
                     await ServerPacket(
-                        OpCode.CLOSE, [CloseReason.NO_MANAGER]
+                        OpCode.CLOSE, ["Server overloaded, try again later"]
                     ).send(self.protocol)
 
                     await self.close()
@@ -74,8 +74,10 @@ class WSConnection:
                 )
             else:
                 await packet.execute_message()
+        except ElevatorError as e:
+            await ServerPacket(OpCode.ERROR, [str(e)]).send(self.protocol)
         except Exception as e:
-            await ServerPacket(OpCode.ERROR, [ErrorCode.UNEXPECTED_ERROR]).send(self.protocol)
+            await ServerPacket(OpCode.ERROR, ['Internal error']).send(self.protocol)
             logger.exception(f'Error processing message from {self.address}', exc_info=e)
 
     @classmethod
