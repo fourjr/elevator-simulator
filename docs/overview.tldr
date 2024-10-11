@@ -561,7 +561,7 @@
 				"scale": 1
 			},
 			"parentId": "page:Hyttx6HZeWB94kTmvlj-N",
-			"index": "aR3T5",
+			"index": "aUC6y",
 			"id": "shape:SRk_Hi0SVxl2uZROn9Xyt",
 			"typeName": "shape",
 			"opacity": 0.75,
@@ -1241,88 +1241,6 @@
 			}
 		},
 		{
-			"id": "pointer:pointer",
-			"typeName": "pointer",
-			"x": 151.20435501471036,
-			"y": 216.0833682003023,
-			"lastActivityTimestamp": 1728644222104,
-			"meta": {}
-		},
-		{
-			"followingUserId": null,
-			"opacityForNextShape": 0.75,
-			"stylesForNextShape": {
-				"tldraw:size": "m",
-				"tldraw:font": "draw",
-				"tldraw:arrowheadStart": "none",
-				"tldraw:arrowheadEnd": "arrow",
-				"tldraw:fill": "pattern"
-			},
-			"brush": null,
-			"scribbles": [],
-			"cursor": {
-				"type": "default",
-				"rotation": 0
-			},
-			"isFocusMode": false,
-			"exportBackground": true,
-			"isDebugMode": false,
-			"isToolLocked": false,
-			"screenBounds": {
-				"x": 0,
-				"y": 0,
-				"w": 768,
-				"h": 914.8800659179688
-			},
-			"insets": [
-				false,
-				false,
-				true,
-				false
-			],
-			"zoomBrush": null,
-			"isGridMode": false,
-			"isPenMode": false,
-			"chatMessage": "",
-			"isChatting": false,
-			"highlightedUserIds": [],
-			"isFocused": true,
-			"devicePixelRatio": 1.0416666269302368,
-			"isCoarsePointer": false,
-			"isHoveringCanvas": false,
-			"openMenus": [],
-			"isChangingStyle": false,
-			"isReadonly": false,
-			"meta": {},
-			"duplicateProps": null,
-			"id": "instance:instance",
-			"currentPageId": "page:Hyttx6HZeWB94kTmvlj-N",
-			"typeName": "instance"
-		},
-		{
-			"editingShapeId": null,
-			"croppingShapeId": null,
-			"selectedShapeIds": [
-				"shape:fLf8LdAkcJx43F9hYKWLB"
-			],
-			"hoveredShapeId": null,
-			"erasingShapeIds": [],
-			"hintingShapeIds": [],
-			"focusedGroupId": null,
-			"meta": {},
-			"id": "instance_page_state:page:Hyttx6HZeWB94kTmvlj-N",
-			"pageId": "page:Hyttx6HZeWB94kTmvlj-N",
-			"typeName": "instance_page_state"
-		},
-		{
-			"x": -107.30217103268342,
-			"y": 544.3796318187005,
-			"z": 0.48209448815102374,
-			"meta": {},
-			"id": "camera:page:Hyttx6HZeWB94kTmvlj-N",
-			"typeName": "camera"
-		},
-		{
 			"x": 1006.2512648171071,
 			"y": -42.19407207744416,
 			"rotation": 0,
@@ -1924,6 +1842,82 @@
 				"isExact": false,
 				"isPrecise": true
 			}
+		},
+		{
+			"id": "pointer:pointer",
+			"typeName": "pointer",
+			"x": 904.1444171375622,
+			"y": 342.8191801743243,
+			"lastActivityTimestamp": 1728645859139,
+			"meta": {}
+		},
+		{
+			"followingUserId": null,
+			"opacityForNextShape": 1,
+			"stylesForNextShape": {},
+			"brush": null,
+			"scribbles": [],
+			"cursor": {
+				"type": "default",
+				"rotation": 0
+			},
+			"isFocusMode": false,
+			"exportBackground": false,
+			"isDebugMode": false,
+			"isToolLocked": false,
+			"screenBounds": {
+				"x": 0,
+				"y": 0,
+				"w": 768,
+				"h": 914.8800659179688
+			},
+			"insets": [
+				false,
+				false,
+				true,
+				false
+			],
+			"zoomBrush": null,
+			"isGridMode": false,
+			"isPenMode": false,
+			"chatMessage": "",
+			"isChatting": false,
+			"highlightedUserIds": [],
+			"isFocused": true,
+			"devicePixelRatio": 1.0416666269302368,
+			"isCoarsePointer": false,
+			"isHoveringCanvas": true,
+			"openMenus": [],
+			"isChangingStyle": false,
+			"isReadonly": false,
+			"meta": {},
+			"duplicateProps": null,
+			"id": "instance:instance",
+			"currentPageId": "page:Hyttx6HZeWB94kTmvlj-N",
+			"typeName": "instance"
+		},
+		{
+			"editingShapeId": null,
+			"croppingShapeId": null,
+			"selectedShapeIds": [
+				"shape:SRk_Hi0SVxl2uZROn9Xyt"
+			],
+			"hoveredShapeId": "shape:SfICHaEz8d-0E9sXH8_Zm",
+			"erasingShapeIds": [],
+			"hintingShapeIds": [],
+			"focusedGroupId": null,
+			"meta": {},
+			"id": "instance_page_state:page:Hyttx6HZeWB94kTmvlj-N",
+			"pageId": "page:Hyttx6HZeWB94kTmvlj-N",
+			"typeName": "instance_page_state"
+		},
+		{
+			"x": -392.3986433050692,
+			"y": 127.68874046081696,
+			"z": 0.7485846920069097,
+			"meta": {},
+			"id": "camera:page:Hyttx6HZeWB94kTmvlj-N",
+			"typeName": "camera"
 		}
 	]
 }
