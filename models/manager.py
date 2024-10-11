@@ -50,6 +50,9 @@ class ElevatorManager:
     def on_loop_tick_end(self):
         pass
 
+    async def on_async_loop_exception(self, e: Exception):
+        pass
+
     @property
     def loop(self):
         if self.sync:
@@ -81,6 +84,8 @@ class ElevatorManager:
                     # speed: 3 seconds per floor (1x)
         except asyncio.CancelledError:
             pass
+        except Exception as e:
+            await self.on_async_loop_exception(e)
 
     def _sync_loop(self):
         while self.running and self.is_open:

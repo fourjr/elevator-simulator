@@ -20,6 +20,7 @@ class WSConnection:
         self.client_id = None
         self.manager = None
         self.update_speed = 1
+        self._is_closing = False
 
     @property
     def address(self):
@@ -103,6 +104,10 @@ class WSConnection:
 
     async def close(self):
         """Closes the connection"""
+        if self._is_closing:
+            return
+        self._is_closing = True
+
         if self.client_id is not None and self.client_id in self.app.connections:
             self.app.connections.pop(self.client_id)
 

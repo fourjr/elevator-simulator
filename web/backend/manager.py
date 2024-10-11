@@ -5,7 +5,7 @@ from typing import List
 from models import ElevatorManager, load_algorithms
 from utils import Constants, NoManagerError
 from web.backend.connection import WSConnection
-from web.backend.constants import GameStateUpdate, GameUpdateType, OpCode
+from web.backend.constants import CloseReason, GameStateUpdate, GameUpdateType, OpCode
 from web.backend.packet import ServerPacket
 
 
@@ -36,12 +36,19 @@ class AsyncWebManager(ElevatorManager):
         if value:
             self._loop_task = asyncio.create_task(self.loop())
         else:
-            try:
-                await asyncio.wait_for(self._loop_task, timeout=0.5)  # try to gracefully end the loop
-            except asyncio.TimeoutError:
-                self._loop_task.cancel()
+            if self._loop_task is not None:
+                try:
+                    await asyncio.wait_for(self._loop_task, timeout=0.5)  # try to gracefully end the loop
+                except asyncio.TimeoutError:
+                    self._loop_task.cancel()
 
-            self._loop_task = None
+                self._loop_task = None
+
+    async def on_async_loop_exception(self, e: Exception):
+        self._loop_task = None
+        logger.error('Error in loop', exc_info=e)
+        await ServerPacket(OpCode.CLOSE, [CloseReason.UNEXPECTED]).send(self.ws_connection.protocol)
+        await self.ws_connection.close()
 
     def on_elevator_move(self, elevator: 'Elevator'):
         self.diff_events.append(GameStateUpdate(GameUpdateType.ELEVATOR_MOVE, elevator.id, elevator.current_floor))
