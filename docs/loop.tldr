@@ -114,7 +114,7 @@
 			"isLocked": false,
 			"type": "geo",
 			"props": {
-				"w": 202.49999999999997,
+				"w": 211.77673859499959,
 				"h": 56.28500175476074,
 				"geo": "rectangle",
 				"color": "orange",
@@ -1340,9 +1340,9 @@
 		{
 			"id": "pointer:pointer",
 			"typeName": "pointer",
-			"x": 334.93567957745324,
-			"y": 786.4353525232972,
-			"lastActivityTimestamp": 1728643332885,
+			"x": 856.1126857487977,
+			"y": 553.495093899007,
+			"lastActivityTimestamp": 1728712270113,
 			"meta": {}
 		},
 		{
@@ -1352,7 +1352,7 @@
 			"brush": null,
 			"scribbles": [],
 			"cursor": {
-				"type": "default",
+				"type": "ew-resize",
 				"rotation": 0
 			},
 			"isFocusMode": false,
@@ -1362,7 +1362,7 @@
 			"screenBounds": {
 				"x": 0,
 				"y": 0,
-				"w": 767.0400390625,
+				"w": 768,
 				"h": 914.8800659179688
 			},
 			"insets": [
@@ -1393,8 +1393,10 @@
 		{
 			"editingShapeId": null,
 			"croppingShapeId": null,
-			"selectedShapeIds": [],
-			"hoveredShapeId": null,
+			"selectedShapeIds": [
+				"shape:1Ju-Xc4GHoLoU-k4ErK6H"
+			],
+			"hoveredShapeId": "shape:1Ju-Xc4GHoLoU-k4ErK6H",
 			"erasingShapeIds": [],
 			"hintingShapeIds": [],
 			"focusedGroupId": null,
@@ -1404,9 +1406,9 @@
 			"typeName": "instance_page_state"
 		},
 		{
-			"x": 21.632625692194825,
-			"y": -99.20327698222329,
-			"z": 0.6562557483145954,
+			"x": -534.130887156663,
+			"y": -377.92502988962656,
+			"z": 1.5474167264438776,
 			"meta": {},
 			"id": "camera:page:Hyttx6HZeWB94kTmvlj-N",
 			"typeName": "camera"
