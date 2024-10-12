@@ -1,9 +1,9 @@
-import { Close } from "@mui/icons-material";
-import { IconButton, Snackbar } from "@mui/material";
 import React from "react";
+import { IconButton, Snackbar } from "@mui/material";
+import { Close } from "@mui/icons-material";
+
 
 export default function CustomSnackbar({ snackbarOpen, setSnackbarOpen, snackbarMessage, color="generic" }: { snackbarOpen: boolean, setSnackbarOpen: (open: boolean) => void, snackbarMessage: string, color?: "error" | "success" | "generic" }) {
-
     const action = (
         <React.Fragment>
             <IconButton

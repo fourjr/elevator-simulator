@@ -6,9 +6,12 @@ from typing import List, Tuple
 
 from websockets import ConnectionClosed
 
-from utils import InvalidStartBytesError, IncompletePacketError, InvalidChecksumError, i2b, b2i, algo_to_enum
-from utils.errors import BadArgumentError, NoManagerError
-from web.backend.constants import Algorithms, ErrorCode, PacketConstants, OpCode
+from utils import (
+    i2b, b2i, algo_to_enum,
+    InvalidStartBytesError, IncompletePacketError, InvalidChecksumError,
+    BadArgumentError, NoManagerError
+)
+from web.backend.constants import Algorithms, PacketConstants, OpCode
 
 
 logger = logging.getLogger('__main__.' + __name__)
@@ -115,8 +118,8 @@ class ClientPacket:
                 ev_id = self._read_int()
                 try:
                     manager.remove_elevator(ev_id)
-                except BadArgumentError:
-                    await self.error(ErrorCode.BAD_ARGUMENT)
+                except BadArgumentError as e:
+                    await self.error(str(e))
                 else:
                     await self.ack()
 

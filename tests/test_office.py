@@ -4,8 +4,8 @@ import time
 from models import Load
 from models import ElevatorAlgorithm
 
+from models.algorithm import load_algorithms
 from suite import TestSettings, TestSuite
-from utils import load_algorithms
 
 
 def morning_init(algo: ElevatorAlgorithm):

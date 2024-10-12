@@ -5,7 +5,7 @@ import logging
 import websockets
 
 from utils.errors import ElevatorError, IncompletePacketError, InvalidStartBytesError, NoManagerError
-from web.backend.constants import CloseReason, ErrorCode, OpCode
+from web.backend.constants import OpCode
 from web.backend.packet import ClientPacket, ServerPacket
 
 

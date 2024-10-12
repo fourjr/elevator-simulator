@@ -10,10 +10,9 @@ from typing import List, Tuple
 
 import colorama
 
-from utils import LogOrigin
+from utils import LogOrigin, get_log_name
 from models import ElevatorAlgorithm
-from suite import BackgroundProcess, TestStats, TestSuiteManager
-from suite.manager import ManagerPool, run_loop
+from suite import BackgroundProcess, TestStats, TestSuiteManager, ManagerPool, run_loop
 
 
 class TestSuite:
@@ -78,7 +77,8 @@ class TestSuite:
                 break
             else:
                 if level >= self.log_levels[origin]:
-                    fmt = f'[{origin.name}] [{level.name[0]}] {message}'
+                    name = get_log_name(level)
+                    fmt = f'[{origin.name}] [{name[0]}] {message}'
                     if bar is None:
                         print(fmt)
                     else:

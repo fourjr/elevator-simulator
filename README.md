@@ -78,8 +78,9 @@ A rough outline of the packet structure is as follows:
 A basic simulation is done by sending the below packets. After each client packet, the server will respond with the same packet (possibly with additional data).
 ![packets](docs/packets.svg)
 
-## Test Suite
+The next.js frontend can be run with `yarn dev` in the [`web/frontend`](/web/frontend) folder.
 
+## Test Suite
 
 ### End User
 
@@ -88,6 +89,8 @@ The test suite exposes a `TestSuite` class that takes in `TestSettings`. This al
 Further options can also be fed into the `TestSuite` class. Refer to the source code for exact arguments.
 
 It is recommended for the `name` to not be distinguishable to the algorithm and multiple tests (with different algorithms) to have identical names.
+
+`python -m tests` will run all the tests in the `tests` folder. Tests must contain a  `run_test` function
 
 Source Code: [suite.py](/suite.py)    
 Examples: [test_json.py](/test_json.py) ([test.example.json](/test.example.json)), [test_benchmark.py](/test_benchmark.py)
@@ -136,7 +139,7 @@ FCFS                  10   13627.00 (13976.50)  5957.50 (5818.15)  243.40 (213.3
 
 ## Development
 
-Both the GUI and the Test Suite control the same managers and algorithms in the backend. However, there are wrappers to allow for the difference in concurrency type (threading/multiprocessing).
+Both the GUIs and the Test Suite control the same managers and algorithms in the backend. However, there are wrappers to allow for the difference in concurrency type (threading/multiprocessing/asyncio).
 
 ![overview](docs/overview.svg)
 
@@ -154,6 +157,7 @@ Both the GUI and the Test Suite control the same managers and algorithms in the 
 ### Dependencies
 - wxPython===4.2.1 ([PyPi](https://pypi.org/project/wxPython/4.2.1/), [official website](https://wxpython.org/pages/downloads/index.html))
 - tqdm===4.65.0 [test suite only] ([PyPi](https://pypi.org/project/tqdm/4.65.0/))
+- colorama===0.4.6 [test suite only] ([PyPi](https://pypi.org/project/colorama/0.4.6/))
 
 ### Custom Algorithms
 

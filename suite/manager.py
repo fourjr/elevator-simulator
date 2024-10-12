@@ -6,7 +6,7 @@ import multiprocessing as mp
 from utils import Constants, LogOrigin
 from utils import TestTimeoutError
 from models import ElevatorManager
-from utils import load_algorithms
+from models.algorithm import load_algorithms
 
 
 class TestSuiteManager(ElevatorManager):

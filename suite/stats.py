@@ -3,8 +3,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 from utils import _InfinitySentinel, Infinity
-from models import CombinedStats, Load
-from models.stats import SimulationStats
+from models import CombinedStats, Load, SimulationStats
 
 
 @dataclass

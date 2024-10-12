@@ -8,8 +8,8 @@ import dataclasses
 import sys
 import json
 
-from suite import TestSettings, TestSuite
 from models import Load
+from suite import TestSettings, TestSuite
 
 
 def run_test():

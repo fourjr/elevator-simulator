@@ -38,7 +38,7 @@ class TestTimeoutError(ElevatorError):
         self.settings = settings
 
 
-class PacketError(ValueError):
+class PacketError(ElevatorError):
     pass
 
 

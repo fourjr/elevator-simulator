@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import { Dialog, DialogTitle, IconButton, Typography } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2'; // Grid version 2
 import { Close, Settings } from '@mui/icons-material';
 
@@ -7,14 +8,12 @@ import ElevatorStatusPanel from '@/components/ElevatorStatusPanel';
 import ElevatorPanel from '@/components/ElevatorPanel';
 import ControlPanel from '@/components/ControlPanel';
 import StatsPanel from '@/components/StatsPanel';
+import CustomSnackbar from '@/components/CustomSnackbar';
 
 import { ClientPacket, ServerPacket } from '@/models/Packet';
-import { ElevatorAlgorithm, ElevatorPacket, GameState, RegisterPacket, OpCode, GameUpdateType } from '@/models/enums';
+import { ElevatorAlgorithm, GameState, OpCode, GameUpdateType } from '@/models/enums';
 import Elevator from '@/models/Elevator';
-import WSEvent from '@/models/WSEvent';
 import Load from '@/models/Load';
-import { Dialog, DialogTitle, IconButton, Typography } from '@mui/material';
-import CustomSnackbar from '@/components/CustomSnackbar';
 
 
 export default function Home() {

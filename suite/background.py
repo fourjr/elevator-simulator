@@ -3,8 +3,7 @@ import multiprocessing as mp
 import queue
 from datetime import datetime
 
-from utils import LogOrigin
-from utils import save_algorithm
+from utils import LogOrigin, save_algorithm
 
 
 class BackgroundProcess(mp.Process):

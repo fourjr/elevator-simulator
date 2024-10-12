@@ -3,9 +3,8 @@ from typing import List, Set
 
 import wx
 
-from utils import ID
+from utils import ID, get_log_level, get_log_name, log_levels
 from models import log_message
-from utils._utils import get_log_level, get_log_name, log_levels
 
 
 class LogPanel(wx.Panel):

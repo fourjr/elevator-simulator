@@ -2,7 +2,8 @@ import asyncio
 import logging
 from typing import List
 
-from models import ElevatorManager, load_algorithms
+from models import ElevatorManager
+from models.algorithm import load_algorithms
 from utils import Constants, NoManagerError
 from web.backend.connection import WSConnection
 from web.backend.constants import GameStateUpdate, GameUpdateType, OpCode

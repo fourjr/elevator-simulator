@@ -54,15 +54,3 @@ class Algorithms(IntEnum):
     NStepLOOK = 3
     Rolling = 4
     Scatter = 5
-
-
-class CloseReason:
-    UNEXPECTED = 0
-    SERVER_CLOSE = 1
-    CLIENT_CLOSE = 2
-    NO_MANAGER = 3
-
-
-class ErrorCode:
-    BAD_ARGUMENT = 0
-    UNEXPECTED_ERROR = 1

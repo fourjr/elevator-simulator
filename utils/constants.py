@@ -1,5 +1,4 @@
-from enum import IntEnum, Enum
-import logging
+from enum import IntEnum
 
 
 class ID(IntEnum):
@@ -23,7 +22,7 @@ class Direction(IntEnum):
     DOWN = -1
 
 
-class LogOrigin(Enum):
+class LogOrigin(IntEnum):
     SIMULATION = 1
     TEST = 2
     FILE_HANDLER = 3
@@ -31,7 +30,7 @@ class LogOrigin(Enum):
     WEB = 5
 
 
-class ActionType(Enum):
+class ActionType(IntEnum):
     ADD_TICK = 1
     RUN_CYCLE = 2
     MOVE_ELEVATOR = 3
@@ -48,7 +47,7 @@ class Unicode:
 class Constants:
     DEFAULT_ALGORITHM = 'Destination Dispatch'
     DEFAULT_FLOORS = 10
-    MAX_PROCESSES = 3
+    MAX_PROCESSES_WXGUI = 3
     MAX_NUM_LOADS_REMOVED_PER_TICK = 3
 
 

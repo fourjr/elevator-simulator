@@ -1,8 +1,25 @@
-from tests import test_benchmark, test_json, test_day, test_office
+import glob
+import importlib
+import os
+from typing import Callable, Dict
+
+
+def get_tests() -> Dict[str, Callable]:
+    tests = {}
+    for i in glob.iglob('tests/*.py'):
+        if not i.endswith('__main__.py'):
+            module = importlib.import_module(i.replace(os.path.sep, '.')[:-3])
+            if not hasattr(module, 'run_test'):
+                raise AttributeError(f'{module} does not have a run_test function')
+
+            tests[module.__name__] = module.run_test
+
+    return tests
 
 
 if __name__ == '__main__':
-    test_json.run_test()
-    test_day.run_test()
-    test_office.run_test()
-    test_benchmark.run_test()
+    tests = get_tests()
+    print(f'[SUITE] [I] Found {len(tests)} tests')
+    for name, func in tests.items():
+        print(f'[SUITE] [I] Running {name}')
+        func()

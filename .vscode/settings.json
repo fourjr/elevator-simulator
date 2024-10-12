@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "BESTWRAP",
+        "colorama",
         "elev",
         "FCFS",
         "HSCROLL",
@@ -12,6 +13,7 @@
         "SPINCTRL",
         "SPINCTRLDOUBLE",
         "tqdm",
+        "WXGUI",
         "wxne"
     ],
     "material-icon-theme.folders.associations": {

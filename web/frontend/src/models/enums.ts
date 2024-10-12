@@ -43,20 +43,4 @@ enum GameState {
     PAUSED = 1,
 }
 
-// PACKET STRUCTURE
-
-
-enum RegisterPacket {
-    floors = 0,
-    maxLoad = 1,
-    algorithm = 2,
-    simulationSpeed = 3,
-    updateRate = 4
-}
-
-enum ElevatorPacket {
-    id = 0,
-    currentFloor = 1,
-}
-
-export { ElevatorAlgorithm, RegisterPacket, ElevatorPacket, GameState, GameUpdateType, OpCode };
+export { ElevatorAlgorithm, OpCode, GameUpdateType, GameState };

@@ -1,13 +1,9 @@
-"""Run a test suite from a JSON file.
-
-Usage: Execute script with the path to the JSON file as the first argument.
-Example: python test_json.py test.example.json
-"""
+"""Run a typical benchmark with 100 iterations"""
 import sys
 import time
 
+from models.algorithm import load_algorithms
 from suite import TestSettings, TestSuite
-from utils import load_algorithms
 
 
 def run_test():

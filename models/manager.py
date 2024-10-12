@@ -7,9 +7,8 @@ from typing import Callable, List, Tuple
 
 import wx
 
-from utils import _InfinitySentinel
+from utils import _InfinitySentinel, run_async_or_sync
 from models import ElevatorAlgorithm
-from utils._utils import run_async_or_sync
 
 
 class ElevatorManager:
