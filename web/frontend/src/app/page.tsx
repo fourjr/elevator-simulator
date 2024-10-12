@@ -1,7 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Dialog, DialogTitle, IconButton, Typography } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2'; // Grid version 2
+import { Dialog, DialogTitle, IconButton, Typography, Grid2 as Grid } from '@mui/material';
 import { Close, Settings } from '@mui/icons-material';
 
 import ElevatorStatusPanel from '@/components/ElevatorStatusPanel';
@@ -210,10 +209,10 @@ export default function Home() {
                 height: "90vh",
                 width: "100%",
             }}>
-                <Grid container xs={12} sm={6} sx={{
+                <Grid container size={{xs: 12, sm: 6}} sx={{
                     flexDirection: "column"
                 }}>
-                    <Grid xs={8} sx={{
+                    <Grid size={8} sx={{
                         height: "100%",
                         maxHeight: "90vh",
                         overflow: "auto",
@@ -222,14 +221,14 @@ export default function Home() {
                         <ElevatorPanel elevators={elevators} />
                     </Grid>
                 </Grid>
-                <Grid xs={12} sm={2} sx={{
+                <Grid size={{xs: 12, sm: 2}} sx={{
                     maxHeight: "90vh",
                     overflow: "auto"
                 }}>
                     <ElevatorStatusPanel floors={floors} loads={loads} />
                 </Grid>
-                <Grid xs={12} sm={4}>
-                    <Grid xs={8} sx={{
+                <Grid size={{xs: 12, sm: 4}}>
+                    <Grid size={8} sx={{
                         height: "100%",
                     }}>
                         <StatsPanel currentTick={currentTick} />

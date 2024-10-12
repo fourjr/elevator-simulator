@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, MenuItem, Select, SelectChangeEvent, TextField, Typography } from "@mui/material";
-import Grid from '@mui/material/Unstable_Grid2';
+import { Box, Button, Grid2 as Grid, MenuItem, Select, SelectChangeEvent, TextField, Typography } from "@mui/material";
 
 import { ElevatorAlgorithm, GameState, OpCode } from "@/models/enums";
 import { ClientPacket } from "@/models/Packet";
@@ -140,7 +139,7 @@ export default function ControlPanel(
 
     return <React.Fragment>
         <Grid container m={3} mt={0}>
-            <Grid xs={7}>
+            <Grid size={7}>
                 <Box m={1}>
                     <Typography m={1} display="inline">Elevator</Typography>
                     <FloorsInputField value={newElevatorFloor} setValue={setNewElevatorFloor} />
@@ -190,7 +189,7 @@ export default function ControlPanel(
                     <Button onClick={sendReset}>Reset</Button>
                 </Box>
             </Grid>
-            <Grid xs={5}>
+            <Grid size={5}>
                 <Box m={1}>
                     <Typography m={1} display="inline">Floors</Typography>
                     <TextField sx={{ width: "4ch" }} value={floorInput !== null ? floorInput : ""} onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,7 +220,7 @@ export default function ControlPanel(
                         if (val < 0.01 || val > 100) {
                             setSimulationSpeedInput(clamp(val, 0.01, 100).toString());
                         }
-                        else if (/[A-z]/g.test(event.target.value)) {
+                        else if (/[[A-Za-z]/g.test(event.target.value)) {
                             setSimulationSpeedInput("");
                         }
                         else {
@@ -234,7 +233,7 @@ export default function ControlPanel(
                         if (val < 1 || val > 100) {
                             setUpdateRateInput(clamp(val, 1, 100).toString());
                         }
-                        else if (/[A-z]/g.test(event.target.value)) {
+                        else if (/[A-Za-z]/g.test(event.target.value)) {
                             setUpdateRateInput("");
                         }
                         else {

@@ -70,7 +70,10 @@ class AsyncWebManager(ElevatorManager):
     async def send_diff_events(self, *, force=False):
         if self.ws_connection is not None:
             if force or self.algorithm.tick_count % self.ws_connection.update_rate == 0:
-                flattened_data = [self.algorithm.tick_count, len(self.diff_events)] + [x for event in self.diff_events for x in event.flatten()]
+                flattened_data = (
+                    [self.algorithm.tick_count, len(self.diff_events)] +
+                    [x for event in self.diff_events for x in event.flatten()]
+                )
                 await ServerPacket(OpCode.GAME_UPDATE_STATE, flattened_data).send(self.ws_connection.protocol)
                 self.diff_events = []
         else:

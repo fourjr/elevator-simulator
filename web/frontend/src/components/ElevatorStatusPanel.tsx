@@ -1,5 +1,5 @@
 import React from "react";
-import Grid from '@mui/material/Unstable_Grid2'; // Grid version 2
+import { Grid2 as Grid } from "@mui/material";
 
 import Load from "@/models/Load";
 
@@ -25,14 +25,14 @@ export default function ElevatorStatusPanel({floors, loads}: {floors: number, lo
     }
 
     return <Grid container m={2} rowSpacing={1}>
-        <Grid xs={4}></Grid>
-        <Grid xs={4}>↑</Grid>
-        <Grid xs={4}>↓</Grid>
+        <Grid size={4}></Grid>
+        <Grid size={4}>↑</Grid>
+        <Grid size={4}>↓</Grid>
         {passengersInFloors.map((floor, index) => {
             return <React.Fragment key={index}>
-                <Grid xs={4}>{index + 1}</Grid>
-                <Grid xs={4}>{floor.goingUp}</Grid>
-                <Grid xs={4}>{floor.goingDown}</Grid>
+                <Grid size={4}>{index + 1}</Grid>
+                <Grid size={4}>{floor.goingUp}</Grid>
+                <Grid size={4}>{floor.goingDown}</Grid>
             </React.Fragment>
         })}
     </Grid>
